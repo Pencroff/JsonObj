@@ -19,6 +19,8 @@ const (
 	Array                  = 'a'
 )
 
+var UnsupportedTypeError = errors.New("unsupported value type, resolved as null")
+
 // JsonStruct is a struct that can be converted to JSON.
 //// It implements the json.Marshaler and json.Unmarshaler interfaces.
 //// It also implements the sql.Scanner and sql.Valuer interfaces.
@@ -67,47 +69,30 @@ func (s *JsonStruct) Set(key string, value interface{}) (err error) {
 	if s.valType != Object {
 		s.AsObject()
 	}
-	v, ok := value.(JsonStruct)
-	if ok {
-		s.m[key] = &v
-		return nil
+	v, ok := s.m[key]
+	if !ok {
+		v = &JsonStruct{}
 	}
-	vptr, ok := value.(*JsonStruct)
-	if ok {
-		s.m[key] = vptr
-		return nil
+	switch data := value.(type) {
+	case nil:
+	case JsonStruct:
+		v = &data
+	case *JsonStruct:
+		v = data
+	case int:
+		v.SetInt(data)
+	case float64:
+		v.SetFloat(data)
+	case bool:
+		v.SetBool(data)
+	case string:
+		v.SetString(data)
+	case time.Time:
+		v.SetTime(data)
+	default:
+		return UnsupportedTypeError
 	}
-	jsonStruct := JsonStruct{}
-
-	vInt, ok := value.(int)
-	if ok {
-		jsonStruct.SetInt(vInt)
-	} else {
-		vFloat, ok := value.(float64)
-		if ok {
-			jsonStruct.SetFloat(vFloat)
-		} else {
-			vBool, ok := value.(bool)
-			if ok {
-				jsonStruct.SetBool(vBool)
-			} else {
-				vStr, ok := value.(string)
-				if ok {
-					jsonStruct.SetString(vStr)
-				} else {
-					vTime, ok := value.(time.Time)
-					if ok {
-						jsonStruct.SetTime(vTime)
-					} else {
-						if value != nil {
-							return errors.New("unsupported value type, resolved as null")
-						}
-					}
-				}
-			}
-		}
-	}
-	s.m[key] = &jsonStruct
+	s.m[key] = v
 	return nil
 }
 

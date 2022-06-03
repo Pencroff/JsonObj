@@ -26,22 +26,6 @@ func TestSetKeyValue(t *testing.T) {
 	assert.Equal(t, "value", v.GetString())
 }
 
-func TestJsonStruct_Set_JsonStruct(t *testing.T) {
-	js := JsonStruct{}
-	v := &JsonStruct{}
-	v.SetString("a")
-	js.Set("keyValue", *v)
-	v = &JsonStruct{}
-	v.SetString("b")
-	js.Set("keyPointer", v)
-	assert.Equal(t, true, js.Has("keyValue"))
-	assert.Equal(t, true, js.Has("keyPointer"))
-	v = js.Get("keyValue")
-	assert.Equal(t, "a", v.GetString())
-	v = js.Get("keyPointer")
-	assert.Equal(t, "b", v.GetString())
-}
-
 func TestJsonStruct_Set(t *testing.T) {
 	js := JsonStruct{}
 	js.Set("keyStr", "value")
@@ -65,14 +49,35 @@ func TestJsonStruct_Set(t *testing.T) {
 	assert.Equal(t, true, js.Has("keyTime"))
 	assert.Equal(t, true, js.Get("keyTime").IsTime())
 	assert.Equal(t, tm, js.Get("keyTime").GetTime())
-	v := map[string]string{"a": "b"}
-	e := js.Set("keyMap", v)
+	vMap := map[string]string{"a": "b"}
+	e := js.Set("keyMap", vMap)
 	assert.EqualError(t, e, "unsupported value type, resolved as null")
 	assert.Equal(t, false, js.Has("keyMap"))
 	e = js.Set("key", nil)
 	assert.NoError(t, e)
 	assert.Equal(t, true, js.Has("key"))
 	assert.Equal(t, true, js.Get("key").IsNull())
+	vJs := JsonStruct{}
+	pJs := &JsonStruct{}
+	vJs.SetString("a")
+	js.Set("keyValue", vJs)
+	pJs.SetString("b")
+	js.Set("keyPointer", pJs)
+	assert.Equal(t, true, js.Has("keyValue"))
+	assert.Equal(t, true, js.Has("keyPointer"))
+	v := js.Get("keyValue")
+	assert.Equal(t, "a", v.GetString())
+	v = js.Get("keyPointer")
+	assert.Equal(t, "b", v.GetString())
+	assert.Equal(t, false, vJs.IsInt())
+	js.Set("key", pJs)
+	js.Set("key", 10)
+	assert.Equal(t, 10, js.Get("key").GetInt())
+	assert.Equal(t, 10, pJs.GetInt())
+	//js.Set("key", vJs)
+	//js.Set("key", 20)
+	//assert.Equal(t, 20, js.Get("key").GetInt())
+	//assert.Equal(t, 20, vJs.GetInt())
 }
 
 func TestAsObjectAsArray(t *testing.T) {
