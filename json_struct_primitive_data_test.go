@@ -11,9 +11,10 @@ func TestNullOps(t *testing.T) {
 	assert.Equal(t, true, js.IsNull())
 	assert.Equal(t, "null", js.ToJson())
 	js.SetInt(1)
-	assert.Equal(t, true, js.IsNumber())
+	assert.Equal(t, false, js.IsNull())
 	js.SetNull()
 	assert.Equal(t, true, js.IsNull())
+
 }
 
 func TestIntOps(t *testing.T) {
