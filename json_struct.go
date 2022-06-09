@@ -6,18 +6,79 @@ import (
 	"time"
 )
 
+type JsonStructPrimitiveOps interface {
+	IsNumber() bool
+	IsInt() bool
+	SetInt(int)
+	Int() int
+	IsFloat() bool
+	SetFloat(float64)
+	Float() float64
+	IsBool() bool
+	SetBool(bool)
+	Bool() bool
+	IsString() bool
+	SetString(string)
+	String() string
+	IsTime() bool
+	SetTime(time.Time)
+	Time() time.Time
+	IsNull() bool
+	SetNull()
+}
+
+type JsonStructObjectOps interface {
+	Set(string, interface{}) error
+	Get(string) *JsonStruct
+	Delete(string) bool
+	Has(string) bool
+	Keys() []string
+	IsObject() bool
+	AsObject()
+}
+
+type JsonStructArrayOps interface {
+	Len() int
+	Push(interface{}) error
+	Pop() *JsonStruct
+	GetIndex(int) *JsonStruct
+	SetIndex(int, interface{}) error
+	AsArray()
+}
+
 type JsonStructType byte
 
 const (
-	Null    JsonStructType = 0
-	Integer                = 'i'
-	Float                  = 'f'
-	Bool                   = 'b'
-	String                 = 's'
-	Time                   = 't'
-	Object                 = 'o'
-	Array                  = 'a'
+	Null JsonStructType = iota
+	Bool
+	Integer
+	Float
+	Time
+	String
+	Object
+	Array
 )
+
+func (t JsonStructType) String() string {
+	switch t {
+	default:
+		return "Null"
+	case Bool:
+		return "Bool"
+	case Integer:
+		return "Integer"
+	case Float:
+		return "Float"
+	case Time:
+		return "Time"
+	case String:
+		return "String"
+	case Object:
+		return "Object"
+	case Array:
+		return "Array"
+	}
+}
 
 var UnsupportedTypeError = errors.New("unsupported value type, resolved as null")
 
@@ -173,7 +234,7 @@ func (s *JsonStruct) SetInt(i int) {
 	s.valType = Integer
 	s.intNum = i
 }
-func (s *JsonStruct) GetInt() int {
+func (s *JsonStruct) Int() int {
 	return s.intNum
 }
 
@@ -186,7 +247,7 @@ func (s *JsonStruct) SetFloat(i float64) {
 	s.valType = Float
 	s.floatNum = i
 }
-func (s *JsonStruct) GetFloat() float64 {
+func (s *JsonStruct) Float() float64 {
 	return s.floatNum
 }
 
@@ -204,7 +265,7 @@ func (s *JsonStruct) SetBool(v bool) {
 		s.intNum = 1
 	}
 }
-func (s *JsonStruct) GetBool() bool {
+func (s *JsonStruct) Bool() bool {
 	return s.intNum == 1
 }
 
@@ -220,7 +281,7 @@ func (s *JsonStruct) SetString(v string) {
 	s.valType = String
 	s.str = v
 }
-func (s *JsonStruct) GetString() string {
+func (s *JsonStruct) String() string {
 	return s.str
 }
 
@@ -237,7 +298,7 @@ func (s *JsonStruct) SetTime(v time.Time) {
 	s.valType = Time
 	s.dt = v
 }
-func (s *JsonStruct) GetTime() time.Time {
+func (s *JsonStruct) Time() time.Time {
 	return s.dt
 }
 
