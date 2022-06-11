@@ -8,17 +8,19 @@ import (
 
 type PrimitiveOpsTestSuite struct {
 	suite.Suite
-	implementation djs.JsonStructPrimitiveOps
-	testJS         djs.JsonStructPrimitiveOps
+	factory func() djs.JsonStructPrimitiveOps
+	testJS  djs.JsonStructPrimitiveOps
 }
 
-func (s *PrimitiveOpsTestSuite) SetImplementation(implementation djs.JsonStructPrimitiveOps) {
-	s.implementation = implementation
+func (s *PrimitiveOpsTestSuite) SetFactory(fn func() djs.JsonStructPrimitiveOps) {
+	s.factory = fn
 }
 
 func (s *PrimitiveOpsTestSuite) SetupTest() {
-	s.testJS = s.implementation
-	s.testJS.SetNull()
+	if s.factory == nil {
+		panic("factory not provided")
+	}
+	s.testJS = s.factory()
 }
 
 func (s *PrimitiveOpsTestSuite) TestNullOps() {

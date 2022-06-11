@@ -2,27 +2,35 @@ package JsonStruct
 
 import (
 	"errors"
-	"strconv"
 	"time"
 )
 
 type JsonStructPrimitiveOps interface {
+	IsBool() bool
+	SetBool(bool)
+	Bool() bool
+
 	IsNumber() bool
 	IsInt() bool
 	SetInt(int)
 	Int() int
+
+	IsUint() bool
+	SetUint(uint)
+	Uint() uint
+
 	IsFloat() bool
 	SetFloat(float64)
 	Float() float64
-	IsBool() bool
-	SetBool(bool)
-	Bool() bool
+
 	IsString() bool
 	SetString(string)
 	String() string
+
 	IsTime() bool
 	SetTime(time.Time)
 	Time() time.Time
+
 	IsNull() bool
 	SetNull()
 }
@@ -43,14 +51,22 @@ type JsonStructArrayOps interface {
 	Pop() *JsonStruct
 	GetIndex(int) *JsonStruct
 	SetIndex(int, interface{}) error
+	IsArray() bool
 	AsArray()
+}
+
+type JsonStructOps interface {
+	JsonStructPrimitiveOps
+	JsonStructObjectOps
+	JsonStructArrayOps
 }
 
 type JsonStructType byte
 
 const (
 	Null JsonStructType = iota
-	Bool
+	False
+	True
 	Integer
 	Float
 	Time
@@ -63,8 +79,10 @@ func (t JsonStructType) String() string {
 	switch t {
 	default:
 		return "Null"
-	case Bool:
-		return "Bool"
+	case False:
+		return "False"
+	case True:
+		return "True"
 	case Integer:
 		return "Integer"
 	case Float:
@@ -106,25 +124,25 @@ type JsonStruct struct {
 	dt       time.Time
 }
 
-func (s *JsonStruct) ToJson() string {
-	switch s.valType {
-	case Integer:
-		return strconv.Itoa(s.intNum)
-	case Float:
-		return strconv.FormatFloat(s.floatNum, 'f', -1, 64)
-	case Bool:
-		if s.intNum == 1 {
-			return "true"
-		} else {
-			return "false"
-		}
-	case String:
-		return `"` + s.str + `"`
-	case Time:
-		return `"` + s.dt.Format(time.RFC3339) + `"`
-	}
-	return "null"
-}
+//func (s *JsonStruct) ToJson() string {
+//	switch s.valType {
+//	case Integer:
+//		return strconv.Itoa(s.intNum)
+//	case Float:
+//		return strconv.FormatFloat(s.floatNum, 'f', -1, 64)
+//	case Bool:
+//		if s.intNum == 1 {
+//			return "true"
+//		} else {
+//			return "false"
+//		}
+//	case String:
+//		return `"` + s.str + `"`
+//	case Time:
+//		return `"` + s.dt.Format(time.RFC3339) + `"`
+//	}
+//	return "null"
+//}
 
 func (s *JsonStruct) Set(key string, value interface{}) (err error) {
 	if s.valType != Object {
@@ -260,9 +278,9 @@ func (s *JsonStruct) IsFloat() bool {
 //region Boolean ops
 func (s *JsonStruct) SetBool(v bool) {
 	s.reset()
-	s.valType = Bool
+	s.valType = False
 	if v {
-		s.intNum = 1
+		s.valType = True
 	}
 }
 func (s *JsonStruct) Bool() bool {
@@ -270,7 +288,7 @@ func (s *JsonStruct) Bool() bool {
 }
 
 func (s *JsonStruct) IsBool() bool {
-	return s.valType == Bool
+	return s.valType == False || s.valType == True
 }
 
 //endregion Boolean ops
