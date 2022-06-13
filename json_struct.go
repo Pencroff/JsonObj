@@ -1,104 +1,8 @@
 package JsonStruct
 
 import (
-	"errors"
 	"time"
 )
-
-type JsonStructPrimitiveOps interface {
-	IsBool() bool
-	SetBool(bool)
-	Bool() bool
-
-	IsNumber() bool
-	IsInt() bool
-	SetInt(int)
-	Int() int
-
-	IsUint() bool
-	SetUint(uint)
-	Uint() uint
-
-	IsFloat() bool
-	SetFloat(float64)
-	Float() float64
-
-	IsString() bool
-	SetString(string)
-	String() string
-
-	IsTime() bool
-	SetTime(time.Time)
-	Time() time.Time
-
-	IsNull() bool
-	SetNull()
-}
-
-type JsonStructObjectOps interface {
-	Set(string, interface{}) error
-	Get(string) *JsonStruct
-	Delete(string) bool
-	Has(string) bool
-	Keys() []string
-	IsObject() bool
-	AsObject()
-}
-
-type JsonStructArrayOps interface {
-	Len() int
-	Push(interface{}) error
-	Pop() *JsonStruct
-	GetIndex(int) *JsonStruct
-	SetIndex(int, interface{}) error
-	IsArray() bool
-	AsArray()
-}
-
-type JsonStructOps interface {
-	JsonStructPrimitiveOps
-	JsonStructObjectOps
-	JsonStructArrayOps
-}
-
-type JsonStructType byte
-
-const (
-	Null JsonStructType = iota
-	False
-	True
-	Integer
-	Float
-	Time
-	String
-	Object
-	Array
-)
-
-func (t JsonStructType) String() string {
-	switch t {
-	default:
-		return "Null"
-	case False:
-		return "False"
-	case True:
-		return "True"
-	case Integer:
-		return "Integer"
-	case Float:
-		return "Float"
-	case Time:
-		return "Time"
-	case String:
-		return "String"
-	case Object:
-		return "Object"
-	case Array:
-		return "Array"
-	}
-}
-
-var UnsupportedTypeError = errors.New("unsupported value type, resolved as null")
 
 // JsonStruct is a struct that can be converted to JSON.
 //// It implements the json.Marshaler and json.Unmarshaler interfaces.
@@ -115,7 +19,7 @@ type JsonStruct struct {
 	m map[string]*JsonStruct
 	a []*JsonStruct
 
-	valType JsonStructType
+	valType Type
 
 	// data
 	intNum   int
@@ -182,7 +86,7 @@ func (s *JsonStruct) Get(key string) *JsonStruct {
 	return nil
 }
 
-func (s *JsonStruct) Delete(key string) bool {
+func (s *JsonStruct) Remove(key string) bool {
 	_, ok := s.m[key]
 	delete(s.m, key)
 	return ok
@@ -244,12 +148,12 @@ func (s *JsonStruct) SetNull() {
 
 //region Number ops
 func (s *JsonStruct) IsNumber() bool {
-	return s.valType == Integer || s.valType == Float
+	return s.valType == Int || s.valType == Uint || s.valType == Float
 }
 
 func (s *JsonStruct) SetInt(i int) {
 	s.reset()
-	s.valType = Integer
+	s.valType = Int
 	s.intNum = i
 }
 func (s *JsonStruct) Int() int {
@@ -257,7 +161,7 @@ func (s *JsonStruct) Int() int {
 }
 
 func (s *JsonStruct) IsInt() bool {
-	return s.valType == Integer
+	return s.valType == Int
 }
 
 func (s *JsonStruct) SetFloat(i float64) {

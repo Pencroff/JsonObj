@@ -8,11 +8,11 @@ import (
 
 type PrimitiveOpsTestSuite struct {
 	suite.Suite
-	factory func() djs.JsonStructPrimitiveOps
-	testJS  djs.JsonStructPrimitiveOps
+	factory func() djs.JsonStructOps
+	testJS  djs.PrimitiveOps
 }
 
-func (s *PrimitiveOpsTestSuite) SetFactory(fn func() djs.JsonStructPrimitiveOps) {
+func (s *PrimitiveOpsTestSuite) SetFactory(fn func() djs.JsonStructOps) {
 	s.factory = fn
 }
 
@@ -31,7 +31,8 @@ func (s *PrimitiveOpsTestSuite) TestNullOps() {
 	s.Equal(true, s.testJS.IsNull())
 	// default value
 	s.Equal(false, s.testJS.Bool())
-	s.Equal(0, s.testJS.Int())
+	s.Equal(int64(0), s.testJS.Int())
+	s.Equal(uint64(0), s.testJS.Uint())
 	s.Equal(0.0, s.testJS.Float())
 	s.Equal(time.Time{}, s.testJS.Time())
 	s.Equal("null", s.testJS.String())
@@ -41,15 +42,16 @@ func (s *PrimitiveOpsTestSuite) TestBoolOps() {
 	s.testJS.SetBool(true)
 	s.Equal(true, s.testJS.IsBool())
 	s.Equal(true, s.testJS.Bool())
-	s.Equal(1, s.testJS.Int())
-	s.Equal(1, s.testJS.Float())
+	s.Equal(int64(1), s.testJS.Int())
+	s.Equal(1.0, s.testJS.Float())
 	t, _ := time.Parse(time.RFC3339, "true")
 	s.Equal(t, s.testJS.Time())
 	s.Equal("true", s.testJS.String())
 	s.testJS.SetBool(false)
 	s.Equal(false, s.testJS.Bool())
-	s.Equal(0, s.testJS.Int())
-	s.Equal(0, s.testJS.Float())
+	s.Equal(int64(0), s.testJS.Int())
+	s.Equal(uint64(0), s.testJS.Uint())
+	s.Equal(0.0, s.testJS.Float())
 	t, _ = time.Parse(time.RFC3339, "false")
 	s.Equal(t, s.testJS.Time())
 	s.Equal("false", s.testJS.String())
@@ -62,8 +64,9 @@ func (s *PrimitiveOpsTestSuite) TestIntOps() {
 	s.Equal(false, s.testJS.IsFloat())
 
 	s.Equal(true, s.testJS.Bool())
-	s.Equal(1, s.testJS.Int())
-	s.Equal(1, s.testJS.Float())
+	s.Equal(int64(1), s.testJS.Int())
+	s.Equal(uint64(1), s.testJS.Uint())
+	s.Equal(1.0, s.testJS.Float())
 	t, _ := time.Parse(time.RFC3339, "1")
 	s.Equal(t, s.testJS.Time())
 	s.Equal("1", s.testJS.String())
@@ -79,7 +82,8 @@ func (s *PrimitiveOpsTestSuite) TestFloatOps() {
 	s.Equal(true, s.testJS.IsFloat())
 
 	s.Equal(true, s.testJS.Bool())
-	s.Equal(3, s.testJS.Int())
+	s.Equal(int64(3), s.testJS.Int())
+	s.Equal(uint64(3), s.testJS.Uint())
 	s.Equal(3.141592653589793, s.testJS.Float())
 	t, _ := time.Parse(time.RFC3339, "3.141592653589793")
 	s.Equal(t, s.testJS.Time())
@@ -94,19 +98,30 @@ func (s *PrimitiveOpsTestSuite) TestStringOps() {
 	s.Equal(true, s.testJS.IsString())
 
 	s.Equal(true, s.testJS.Bool())
-	s.Equal(3, s.testJS.Int())
-	s.Equal(3.141592653589793, s.testJS.Float())
-	t, _ := time.Parse(time.RFC3339, "3.141592653589793")
+	s.Equal(int64(0), s.testJS.Int())
+	s.Equal(uint64(0), s.testJS.Uint())
+	s.Equal(0.0, s.testJS.Float())
+	t, _ := time.Parse(time.RFC3339, "hello")
 	s.Equal(t, s.testJS.Time())
-	s.Equal("3.141592653589793", s.testJS.String())
+	s.Equal("hello", s.testJS.String())
 
 	s.testJS.SetString("")
 	s.Equal(false, s.testJS.Bool())
-	s.Equal(0, s.testJS.Int())
-	s.Equal(0.141592653589793, s.testJS.Float())
+	s.Equal(int64(0), s.testJS.Int())
+	s.Equal(uint64(0), s.testJS.Uint())
+	s.Equal(0.0, s.testJS.Float())
 	t, _ = time.Parse(time.RFC3339, "")
 	s.Equal(t, s.testJS.Time())
 	s.Equal("", s.testJS.String())
+
+	s.testJS.SetString("3.141592653589793")
+	s.Equal(true, s.testJS.Bool())
+	s.Equal(int64(3), s.testJS.Int())
+	s.Equal(uint64(3), s.testJS.Uint())
+	s.Equal(3.141592653589793, s.testJS.Float())
+	t, _ = time.Parse(time.RFC3339, "3.141592653589793")
+	s.Equal(t, s.testJS.Time())
+	s.Equal("3.141592653589793", s.testJS.String())
 
 }
 

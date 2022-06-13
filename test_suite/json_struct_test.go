@@ -7,26 +7,38 @@ import (
 	"testing"
 )
 
-func TestJsonStruct_PrimitiveOpsTestSuite(t *testing.T) {
-	s := new(PrimitiveOpsTestSuite)
-	s.SetFactory(func() djs.JsonStructPrimitiveOps {
-		return &djs.JsonStruct{}
-	})
-	suite.Run(t, s)
-}
+//func JsonStructFactory() djs.JsonStructOps {
+//	return &djs.JsonStruct{}
+//}
+//
+//func TestJsonStruct_PrimitiveOpsTestSuite(t *testing.T) {
+//	s := new(PrimitiveOpsTestSuite)
+//	s.SetFactory(JsonStructFactory)
+//	suite.Run(t, s)
+//}
+//
+//func JsonStructValueFactory() djs.JsonStructOps {
+//	return &ejs.JsonStructValue{}
+//}
+//
+//func TestJsonStructValue_PrimitiveOpsTestSuite(t *testing.T) {
+//	s := new(PrimitiveOpsTestSuite)
+//	s.SetFactory(JsonStructValueFactory)
+//	suite.Run(t, s)
+//}
 
-func TestJsonStructValue_PrimitiveOpsTestSuite(t *testing.T) {
-	s := new(PrimitiveOpsTestSuite)
-	s.SetFactory(func() djs.JsonStructPrimitiveOps {
-		return &ejs.JsonStructValue{}
-	})
-	suite.Run(t, s)
+func JsonStructPointerFactory() djs.JsonStructOps {
+	return &ejs.JsonStructPtr{}
 }
 
 func TestJsonStructPointer_PrimitiveOpsTestSuite(t *testing.T) {
 	s := new(PrimitiveOpsTestSuite)
-	s.SetFactory(func() djs.JsonStructPrimitiveOps {
-		return &ejs.JsonStructPtr{}
-	})
+	s.SetFactory(JsonStructPointerFactory)
+	suite.Run(t, s)
+}
+
+func TestJsonStructPointer_ObjectOps(t *testing.T) {
+	s := new(ObjectOpsTestSuite)
+	s.SetFactory(JsonStructPointerFactory)
 	suite.Run(t, s)
 }
