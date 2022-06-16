@@ -1,17 +1,15 @@
 package test_suite
 
 import (
-	"fmt"
 	djs "github.com/Pencroff/JsonStruct"
 	"github.com/stretchr/testify/suite"
-	"reflect"
 	"time"
 )
 
 type ObjectOpsTestSuite struct {
 	suite.Suite
 	factory func() djs.JsonStructOps
-	testJS  djs.JsonStructOps
+	js      djs.JsonStructOps
 }
 
 func (s *ObjectOpsTestSuite) SetFactory(fn func() djs.JsonStructOps) {
@@ -22,107 +20,155 @@ func (s *ObjectOpsTestSuite) SetupTest() {
 	if s.factory == nil {
 		panic("factory not provided")
 	}
-	s.testJS = s.factory()
+	s.js = s.factory()
 }
 
 func (s *ObjectOpsTestSuite) TestIsAsObject() {
-	s.Equal(true, s.testJS.IsNull())
-	s.Equal(false, s.testJS.IsObject())
-	s.testJS.AsObject()
-	s.Equal(false, s.testJS.IsNull())
-	s.Equal(true, s.testJS.IsObject())
+	s.Equal(true, s.js.IsNull())
+	s.Equal(false, s.js.IsObject())
+	s.js.AsObject()
+	s.Equal(false, s.js.IsNull())
+	s.Equal(true, s.js.IsObject())
 
 	// default value
-	s.Equal(false, s.testJS.Bool())
-	s.Equal(int64(0), s.testJS.Int())
-	s.Equal(uint64(0), s.testJS.Uint())
-	s.Equal(0.0, s.testJS.Float())
-	s.Equal(time.Time{}, s.testJS.Time())
-	s.Equal("[object]", s.testJS.String())
+	s.Equal(false, s.js.Bool())
+	s.Equal(int64(0), s.js.Int())
+	s.Equal(uint64(0), s.js.Uint())
+	s.Equal(0.0, s.js.Float())
+	s.Equal(time.Time{}, s.js.Time())
+	s.Equal("[object]", s.js.String())
 }
 
 func (s *ObjectOpsTestSuite) TestNullObject() {
 	key := "someKey"
-	s.Equal(true, s.testJS.IsNull())
-	s.Equal(false, s.testJS.IsObject())
-	v := s.testJS.Get(key)
+	s.Equal(true, s.js.IsNull())
+	s.Equal(false, s.js.IsObject())
+	v := s.js.GetKey(key)
 	s.Nil(v)
-	s.Equal(false, s.testJS.Has(key))
-	s.testJS.AsObject()
-	v = s.testJS.Get(key)
+	s.Equal(false, s.js.HasKey(key))
+	s.js.AsObject()
+	v = s.js.GetKey(key)
 	s.Nil(v)
-	s.Equal(false, s.testJS.Has(key))
+	s.Equal(false, s.js.HasKey(key))
 }
 
 func (s *ObjectOpsTestSuite) TestSetJustObject() {
 	key := "someKey"
-	s.Equal(true, s.testJS.IsNull())
-	s.Equal(false, s.testJS.IsObject())
-	e := s.testJS.Set(key, "value")
+	s.Equal(true, s.js.IsNull())
+	s.Equal(false, s.js.IsObject())
+	e := s.js.SetKey(key, "value")
 	s.ErrorIs(e, djs.NotObjectError)
-	s.testJS.AsObject()
-	s.Equal(false, s.testJS.IsNull())
-	s.Equal(true, s.testJS.IsObject())
-	e = s.testJS.Set(key, "value")
+	s.js.AsObject()
+	s.Equal(false, s.js.IsNull())
+	s.Equal(true, s.js.IsObject())
+	e = s.js.SetKey(key, "value")
 	s.Nil(e)
 }
 
-func (s *ObjectOpsTestSuite) TestSetObject() {
+func (s *ObjectOpsTestSuite) TestSet() {
 	timeStr := "2015-01-01T12:34:56Z"
-	tm, err := time.Parse(time.RFC3339, timeStr)
-	s.NoError(err)
-	s.Equal(true, s.testJS.IsNull())
+	tm, _ := time.Parse(time.RFC3339, timeStr)
 	obj := s.factory()
 	obj.AsObject()
 	tbl := []struct {
 		key         string
 		val         interface{}
+		resValue    interface{}
 		keyType     djs.Type
 		e           error
 		isMethod    string
 		valueMethod string
 	}{
-		{"a", true, djs.True, nil, "IsBool", "Bool"},
-		{"b", int64(-1), djs.Int, nil, "IsInt", "Int"},
-		{"c", uint64(1), djs.Uint, nil, "IsUint", "Uint"},
-		{"d", 1.0, djs.Float, nil, "IsFloat", "Float"},
-		{"e", "hello", djs.String, nil, "IsString", "String"},
-		{"f", tm, djs.Time, nil, "IsTime", "Time"},
-		{"g", nil, djs.Null, nil, "IsNull", ""},
-		//{"h",
-		//	map[string]interface{}{"boolKey": true, "intKey": -10, "uintKey": 10},
-		//	djs.Null, djs.UnsupportedTypeError, "", ""},
-		{"h", obj, djs.Object, nil, "IsObject", ""},
+		{"a1", true, true, djs.True, nil, "IsBool", "Bool"},
+		{"a2", false, false, djs.False, nil, "IsBool", "Bool"},
+		{"b1", int64(-1), int64(-1), djs.Int, nil, "IsInt", "Int"},
+		{"b2", int32(-2), int64(-2), djs.Int, nil, "IsInt", "Int"},
+		{"b3", int16(-4), int64(-4), djs.Int, nil, "IsInt", "Int"},
+		{"b4", int8(-8), int64(-8), djs.Int, nil, "IsInt", "Int"},
+		{"b5", 128, int64(128), djs.Int, nil, "IsInt", "Int"},
+		{"c1", uint64(128), uint64(128), djs.Uint, nil, "IsUint", "Uint"},
+		{"c2", uint32(64), uint64(64), djs.Uint, nil, "IsUint", "Uint"},
+		{"c3", uint16(32), uint64(32), djs.Uint, nil, "IsUint", "Uint"},
+		{"c4", uint8(16), uint64(16), djs.Uint, nil, "IsUint", "Uint"},
+		{"c5", uint(8), uint64(8), djs.Uint, nil, "IsUint", "Uint"},
+		{"d", 1.0, 1.0, djs.Float, nil, "IsFloat", "Float"},
+		{"e", "hello", "hello", djs.String, nil, "IsString", "String"},
+		{"f", tm, tm, djs.Time, nil, "IsTime", "Time"},
 	}
-	s.testJS.AsObject()
-	for _, t := range tbl {
-		fmt.Printf("%+v\n", t)
-		e := s.testJS.Set(t.key, t.val)
-		v := s.testJS.Get(t.key)
-		s.Equal(t.e, e)
+	s.js.AsObject()
+	for _, el := range tbl {
 
-		s.Equal(t.keyType.String(), v.Type().String(), "key: %s", t.key)
-		s.Equal(true, s.testJS.Has(t.key))
-		if t.isMethod != "" {
-			s.Equal(true, CallMethod(v, t.isMethod))
-		}
-		if t.valueMethod != "" {
-			s.Equal(t.val, CallMethod(v, t.valueMethod))
-		}
+		e := s.js.SetKey(el.key, el.val)
+		v := s.js.GetKey(el.key)
+		s.Equal(el.e, e)
 
+		s.Equal(el.keyType.String(), v.Type().String(), "key: %s", el.key)
+		s.Equal(true, s.js.HasKey(el.key))
+		s.Equal(true, CallMethod(v, el.isMethod))
+		s.Equal(el.resValue, CallMethod(v, el.valueMethod))
 	}
+
 	// default value
-	s.Equal(false, s.testJS.Bool())
-	s.Equal(int64(0), s.testJS.Int())
-	s.Equal(uint64(0), s.testJS.Uint())
-	s.Equal(0.0, s.testJS.Float())
-	s.Equal(time.Time{}, s.testJS.Time())
-	s.Equal("[object]", s.testJS.String())
+	s.Equal(false, s.js.Bool())
+	s.Equal(int64(0), s.js.Int())
+	s.Equal(uint64(0), s.js.Uint())
+	s.Equal(0.0, s.js.Float())
+	s.Equal(time.Time{}, s.js.Time())
+	s.Equal("[object]", s.js.String())
 }
 
-func CallMethod(obj interface{}, method string) interface{} {
-	ptr := reflect.ValueOf(obj)
-	methodValue := ptr.MethodByName(method)
-	res := methodValue.Call([]reflect.Value{})
-	return res[0].Interface()
+func (s *ObjectOpsTestSuite) TestSetUnsupportedType() {
+	t := map[string]interface{}{"boolKey": true, "intKey": -10, "uintKey": 10}
+	key := "someKey"
+	s.js.AsObject()
+
+	err := s.js.SetKey(key, t)
+	s.ErrorIs(err, djs.UnsupportedTypeError)
+	s.Equal(false, s.js.HasKey(key))
+}
+
+func (s *ObjectOpsTestSuite) TestRemoveKey() {
+	s.js.AsObject()
+	s.js.SetKey("a", "aValue")
+	s.js.SetKey("b", "bValue")
+	s.js.SetKey("c", "cValue")
+	keys := s.js.Keys()
+	s.Equal(3, len(keys))
+	s.Equal(true, s.js.HasKey("b"))
+	v := s.js.RemoveKey("b")
+	keys = s.js.Keys()
+	s.Equal(v.Value(), "bValue")
+	s.Equal(2, len(keys))
+	s.Equal(false, s.js.HasKey("b"))
+	v = s.js.RemoveKey("someKey")
+	s.Nil(v)
+}
+
+func (s *ObjectOpsTestSuite) TestKeys() {
+	timeStr := "2015-01-01T12:34:56Z"
+	tm, _ := time.Parse(time.RFC3339, timeStr)
+	tbl := []struct {
+		key string
+		val interface{}
+	}{
+		{"a", true},
+		{"b", int64(-1)},
+		{"c", uint64(1)},
+		{"d", 1.0},
+		{"e", "hello"},
+		{"f", tm},
+	}
+	s.js.AsObject()
+	keys := s.js.Keys()
+	s.Equal(0, len(keys))
+	for _, el := range tbl {
+		s.js.SetKey(el.key, el.val)
+	}
+	keys = s.js.Keys()
+	s.Len(keys, len(tbl))
+	for _, el := range tbl {
+		s.Contains(keys, el.key)
+		v := s.js.GetKey(el.key)
+		s.Equal(0, len(v.Keys()))
+	}
 }

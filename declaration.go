@@ -5,65 +5,6 @@ import (
 	"time"
 )
 
-type PrimitiveOps interface {
-	IsBool() bool
-	SetBool(bool)
-	Bool() bool
-
-	IsNumber() bool
-
-	IsInt() bool
-	SetInt(int64)
-	Int() int64
-
-	IsUint() bool
-	SetUint(uint64)
-	Uint() uint64
-
-	IsFloat() bool
-	SetFloat(float64)
-	Float() float64
-
-	IsString() bool
-	SetString(string)
-	String() string
-
-	IsTime() bool
-	SetTime(time.Time)
-	Time() time.Time
-
-	IsNull() bool
-	SetNull()
-
-	Type() Type
-}
-
-type ObjectOps interface {
-	Set(string, interface{}) error
-	Get(string) JsonStructOps
-	Remove(string) bool
-	Has(string) bool
-	Keys() []string
-	IsObject() bool
-	AsObject()
-}
-
-type ArrayOps interface {
-	Len() int
-	Push(interface{}) error
-	Pop() JsonStructOps
-	SetIndex(int, interface{}) error
-	GetIndex(int) JsonStructOps
-	IsArray() bool
-	AsArray()
-}
-
-type JsonStructOps interface {
-	PrimitiveOps
-	ObjectOps
-	ArrayOps
-}
-
 type Type byte
 
 const (
@@ -104,7 +45,75 @@ func (t Type) String() string {
 	}
 }
 
+type GeneralOps interface {
+	Type() Type
+	Value() interface{}
+
+	IsNull() bool
+	SetNull()
+
+	IsObject() bool
+	AsObject()
+
+	IsArray() bool
+	AsArray()
+
+	Size() int
+}
+
+type PrimitiveOps interface {
+	IsBool() bool
+	SetBool(bool)
+	Bool() bool
+
+	IsNumber() bool
+
+	IsInt() bool
+	SetInt(int64)
+	Int() int64
+
+	IsUint() bool
+	SetUint(uint64)
+	Uint() uint64
+
+	IsFloat() bool
+	SetFloat(float64)
+	Float() float64
+
+	IsString() bool
+	SetString(string)
+	String() string
+
+	IsTime() bool
+	SetTime(time.Time)
+	Time() time.Time
+}
+
+type ObjectOps interface {
+	SetKey(string, interface{}) error
+	GetKey(string) JsonStructOps
+	RemoveKey(string) JsonStructOps
+	HasKey(string) bool
+	Keys() []string
+}
+
+type ArrayOps interface {
+	Push(interface{}) error
+	Pop() JsonStructOps
+	Shift() JsonStructOps
+	SetIndex(int, interface{}) error
+	GetIndex(int) JsonStructOps
+}
+
+type JsonStructOps interface {
+	GeneralOps
+	PrimitiveOps
+	ObjectOps
+	ArrayOps
+}
+
 var UnsupportedTypeError = errors.
 	New("unsupported value type, resolved as null")
 var NotObjectError = errors.New("not an object, set explicitly")
 var NotArrayError = errors.New("not an array, set explicitly")
+var IndexOutOfRangeError = errors.New("index out of range")

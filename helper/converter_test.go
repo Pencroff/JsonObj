@@ -66,16 +66,24 @@ func (s *ConverterTestSuite) TestStringToIntTable() {
 		{"-9223372036854775808", -1 << 63, true},
 		{"9223372036854775809", 1<<63 - 1, false},
 		{"-9223372036854775809", -1 << 63, false},
+		{"99999999999999999999", 1<<63 - 1, false},
+		{"-99999999999999999999", -1 << 63, false},
 		{"-1_2_3_4_5", 0, false},
 		{"-_12345", 0, false},
 		{"_12345", 0, false},
 		{"1__2345", 0, false},
 		{"12345_", 0, false},
+		{"3.14", 3, true},   // edge case: resolve just integer part of float
+		{"-3.14", -3, true}, // edge case: resolve just integer part of float
+		{"0.14", 0, true},
+		{"-0.14", 0, true},
+		{".14", 0, false},
+		{"-.14", 0, false},
 	}
 	for idx, el := range parseInt64Tests {
 		i, ok := StringToInt(el.in)
 		s.Equal(el.out, i, "[%d] StringToInt(%q) = %d, %v", idx, el.in, i, ok)
-		s.Equal(el.ok, ok)
+		s.Equal(el.ok, ok, "[%d] %v StringToInt(%q) = %d", idx, ok, el.in, i)
 	}
 }
 
@@ -102,6 +110,7 @@ func (s *ConverterTestSuite) TestStringToUintTable() {
 		{"18446744073709551615", 1<<64 - 1, true},
 		{"18446744073709551616", 1<<64 - 1, false},
 		{"18446744073709551620", 1<<64 - 1, false},
+		{"99999999999999999999", 1<<64 - 1, false},
 		{"1_2_3_4_5", 0, false}, // base=10 so no underscores allowed
 		{"_12345", 0, false},
 		{"1__2345", 0, false},
@@ -109,11 +118,14 @@ func (s *ConverterTestSuite) TestStringToUintTable() {
 		{"-0", 0, false},
 		{"-1", 0, false},
 		{"+1", 0, false},
+		{"3.14", 3, true}, // edge case: resolve just integer part of float
+		{"0.14", 0, true},
+		{".14", 0, false},
 	}
 	for idx, el := range parseUint64Tests {
 		i, ok := StringToUint(el.in)
 		s.Equal(el.out, i, "[%d] StringToUint(%q) = %d, %v", idx, el.in, i, ok)
-		s.Equal(el.ok, ok)
+		s.Equal(el.ok, ok, "[%d] %v StringToUint(%q) = %d", idx, ok, el.in, i)
 	}
 }
 

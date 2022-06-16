@@ -31,6 +31,12 @@ func JsonStructPointerFactory() djs.JsonStructOps {
 	return &ejs.JsonStructPtr{}
 }
 
+func TestJsonStructPointer_GeneralOpsTestSuite(t *testing.T) {
+	s := new(GeneralOpsTestSuite)
+	s.SetFactory(JsonStructPointerFactory)
+	suite.Run(t, s)
+}
+
 func TestJsonStructPointer_PrimitiveOpsTestSuite(t *testing.T) {
 	s := new(PrimitiveOpsTestSuite)
 	s.SetFactory(JsonStructPointerFactory)
@@ -39,6 +45,12 @@ func TestJsonStructPointer_PrimitiveOpsTestSuite(t *testing.T) {
 
 func TestJsonStructPointer_ObjectOps(t *testing.T) {
 	s := new(ObjectOpsTestSuite)
+	s.SetFactory(JsonStructPointerFactory)
+	suite.Run(t, s)
+}
+
+func TestJsonStructPointer_ArrayOps(t *testing.T) {
+	s := new(ArrayOpsTestSuite)
 	s.SetFactory(JsonStructPointerFactory)
 	suite.Run(t, s)
 }

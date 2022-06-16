@@ -19,6 +19,47 @@ func (s *JsonStructPtr) Type() djs.Type {
 	return s.valType
 }
 
+func (s *JsonStructPtr) Value() interface{} {
+	switch s.valType {
+	default:
+		return nil
+	case djs.False:
+		return false
+	case djs.True:
+		return true
+	case djs.Int:
+		return *(*int64)(s.ptr)
+	case djs.Uint:
+		return *(*uint64)(s.ptr)
+	case djs.Float:
+		return *(*float64)(s.ptr)
+	case djs.String:
+		return *(*string)(s.ptr)
+	case djs.Time:
+		return *(*time.Time)(s.ptr)
+	case djs.Object:
+		return *(*map[string]djs.JsonStructOps)(s.ptr)
+	case djs.Array:
+		return *(*[]djs.JsonStructOps)(s.ptr)
+	}
+}
+
+func (s *JsonStructPtr) Size() int {
+	switch s.valType {
+	default:
+		return -1
+	case djs.String:
+		v := *(*string)(s.ptr)
+		return len(v)
+	case djs.Object:
+		v := *(*map[string]djs.JsonStructOps)(s.ptr)
+		return len(v)
+	case djs.Array:
+		v := *(*[]djs.JsonStructOps)(s.ptr)
+		return len(v)
+	}
+}
+
 //region Primitive operations
 
 func (s *JsonStructPtr) IsBool() bool {
@@ -27,7 +68,7 @@ func (s *JsonStructPtr) IsBool() bool {
 
 func (s *JsonStructPtr) SetBool(v bool) {
 	s.valType = djs.False
-	if v {
+	if v == true {
 		s.valType = djs.True
 	}
 	s.ptr = nil
@@ -227,7 +268,7 @@ func (s *JsonStructPtr) SetNull() {
 
 //region Object operations
 
-func (s *JsonStructPtr) Set(key string, v interface{}) error {
+func (s *JsonStructPtr) SetKey(key string, v interface{}) error {
 	if s.valType != djs.Object {
 		return djs.NotObjectError
 	}
@@ -236,49 +277,15 @@ func (s *JsonStructPtr) Set(key string, v interface{}) error {
 	if !ok {
 		vjs = &JsonStructPtr{}
 	}
-	switch data := v.(type) {
-	case JsonStructPtr:
-		vjs = &data
-	case *JsonStructPtr:
-		vjs = data
-	case nil:
-		vjs.SetNull()
-	case bool:
-		vjs.SetBool(data)
-	case int8:
-		vjs.SetInt(int64(data))
-	case int16:
-		vjs.SetInt(int64(data))
-	case int32:
-		vjs.SetInt(int64(data))
-	case int64:
-		vjs.SetInt(data)
-	case int:
-		vjs.SetInt(int64(data))
-	case uint8:
-		vjs.SetUint(uint64(data))
-	case uint16:
-		vjs.SetUint(uint64(data))
-	case uint32:
-		vjs.SetUint(uint64(data))
-	case uint64:
-		vjs.SetUint(data)
-	case uint:
-		vjs.SetUint(uint64(data))
-	case float64:
-		vjs.SetFloat(data)
-	case string:
-		vjs.SetString(data)
-	case time.Time:
-		vjs.SetTime(data)
-	default:
-		return djs.UnsupportedTypeError
+	vjs, err := s.populateVjs(v, vjs)
+	if err != nil {
+		return err
 	}
 	m[key] = vjs
 	return nil
 }
 
-func (s *JsonStructPtr) Get(key string) djs.JsonStructOps {
+func (s *JsonStructPtr) GetKey(key string) djs.JsonStructOps {
 	if s.valType != djs.Object {
 		return nil
 	}
@@ -286,14 +293,14 @@ func (s *JsonStructPtr) Get(key string) djs.JsonStructOps {
 	return m[key]
 }
 
-func (s *JsonStructPtr) Remove(key string) bool {
+func (s *JsonStructPtr) RemoveKey(key string) djs.JsonStructOps {
 	m := *(*map[string]djs.JsonStructOps)(s.ptr)
-	_, ok := m[key]
+	v, _ := m[key]
 	delete(m, key)
-	return ok
+	return v
 }
 
-func (s *JsonStructPtr) Has(key string) bool {
+func (s *JsonStructPtr) HasKey(key string) bool {
 	if s.valType != djs.Object {
 		return false
 	}
@@ -303,8 +310,17 @@ func (s *JsonStructPtr) Has(key string) bool {
 }
 
 func (s *JsonStructPtr) Keys() []string {
-	//TODO implement me
-	panic("implement me")
+	if s.valType != djs.Object {
+		return []string{}
+	}
+	m := *(*map[string]djs.JsonStructOps)(s.ptr)
+	keys := make([]string, len(m))
+	var idx uint64
+	for k := range m {
+		keys[idx] = k
+		idx++
+	}
+	return keys
 }
 
 func (s *JsonStructPtr) IsObject() bool {
@@ -320,41 +336,164 @@ func (s *JsonStructPtr) AsObject() {
 
 //region Array operations
 
-func (s *JsonStructPtr) Len() int {
-	//TODO implement me
-	panic("implement me")
-}
+// https://github.com/golang/go/wiki/SliceTricks
 
 func (s *JsonStructPtr) Push(v interface{}) error {
-	//TODO implement me
-	panic("implement me")
+	if s.valType != djs.Array {
+		return djs.NotArrayError
+	}
+	m := *(*[]djs.JsonStructOps)(s.ptr)
+	el, err := s.populateVjs(v, nil)
+	if err != nil {
+		return err
+	}
+	m = append(m, el)
+	s.ptr = unsafe.Pointer(&m)
+	return nil
 }
 
 func (s *JsonStructPtr) Pop() djs.JsonStructOps {
-	//TODO implement me
-	panic("implement me")
+	if s.valType != djs.Array {
+		return nil
+	}
+	m := *(*[]djs.JsonStructOps)(s.ptr)
+	lIdx := len(m) - 1
+	if lIdx == -1 {
+		return nil
+	}
+	v := m[lIdx]
+	m[lIdx] = nil
+	m = m[:lIdx]
+	s.ptr = unsafe.Pointer(&m)
+	return v
+}
+
+func (s *JsonStructPtr) Shift() djs.JsonStructOps {
+	if s.valType != djs.Array {
+		return nil
+	}
+	m := *(*[]djs.JsonStructOps)(s.ptr)
+	l := len(m)
+	if l == 0 {
+		return nil
+	}
+	v := m[0]
+	m[0] = nil
+	m = m[1:]
+	s.ptr = unsafe.Pointer(&m)
+	return v
 }
 
 func (s *JsonStructPtr) SetIndex(i int, v interface{}) error {
-	//TODO implement me
-	panic("implement me")
+	if s.valType != djs.Array {
+		return djs.NotArrayError
+	}
+	if i < 0 {
+		return djs.IndexOutOfRangeError
+	}
+	m := *(*[]djs.JsonStructOps)(s.ptr)
+	l := len(m)
+	if i >= l {
+		m = append(m, make([]djs.JsonStructOps, i-l+1)...)
+		s.ptr = unsafe.Pointer(&m)
+	}
+	el, err := s.populateVjs(v, nil)
+	if err != nil {
+		return err
+	}
+	m[i] = el
+	return nil
 }
 
 func (s *JsonStructPtr) GetIndex(i int) djs.JsonStructOps {
-	//TODO implement me
-	panic("implement me")
+	if s.valType != djs.Array {
+		return nil
+	}
+	m := *(*[]djs.JsonStructOps)(s.ptr)
+	l := len(m)
+	if i >= l {
+		return nil
+	}
+	return m[i]
 }
 
 func (s *JsonStructPtr) IsArray() bool {
-	//TODO implement me
-	panic("implement me")
+	return s.valType == djs.Array
 }
 
 func (s *JsonStructPtr) AsArray() {
-	//TODO implement me
-	panic("implement me")
+	s.valType = djs.Array
+	s.ptr = unsafe.Pointer(&[]JsonStructPtr{})
 }
 
 //endregion Array operations
+
+// region Helper functions
+
+func (s *JsonStructPtr) populateVjs(v interface{}, vjs djs.JsonStructOps) (djs.JsonStructOps, error) {
+	switch data := v.(type) {
+	case JsonStructPtr:
+		vjs = &data
+	case *JsonStructPtr:
+		vjs = data
+	case nil:
+		vjs = resolveValue(vjs)
+		vjs.SetNull()
+	case bool:
+		vjs = resolveValue(vjs)
+		vjs.SetBool(data)
+	case int8:
+		vjs = resolveValue(vjs)
+		vjs.SetInt(int64(data))
+	case int16:
+		vjs = resolveValue(vjs)
+		vjs.SetInt(int64(data))
+	case int32:
+		vjs = resolveValue(vjs)
+		vjs.SetInt(int64(data))
+	case int64:
+		vjs = resolveValue(vjs)
+		vjs.SetInt(data)
+	case int:
+		vjs = resolveValue(vjs)
+		vjs.SetInt(int64(data))
+	case uint8:
+		vjs = resolveValue(vjs)
+		vjs.SetUint(uint64(data))
+	case uint16:
+		vjs = resolveValue(vjs)
+		vjs.SetUint(uint64(data))
+	case uint32:
+		vjs = resolveValue(vjs)
+		vjs.SetUint(uint64(data))
+	case uint64:
+		vjs = resolveValue(vjs)
+		vjs.SetUint(data)
+	case uint:
+		vjs = resolveValue(vjs)
+		vjs.SetUint(uint64(data))
+	case float64:
+		vjs = resolveValue(vjs)
+		vjs.SetFloat(data)
+	case string:
+		vjs = resolveValue(vjs)
+		vjs.SetString(data)
+	case time.Time:
+		vjs = resolveValue(vjs)
+		vjs.SetTime(data)
+	default:
+		return nil, djs.UnsupportedTypeError
+	}
+	return vjs, nil
+}
+
+func resolveValue(v djs.JsonStructOps) djs.JsonStructOps {
+	if v == nil {
+		return &JsonStructPtr{}
+	}
+	return v
+}
+
+// endregion Helper functions
 
 //endregion JsonStructPtr

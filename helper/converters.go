@@ -1,7 +1,5 @@
 package helper
 
-import "math/bits"
-
 const (
 	// MaxUint is the maximum value of uint
 	MaxUint    = ^uint64(0)
@@ -32,48 +30,48 @@ func FloatToInt(val float64) int64 {
 // https://github.com/tidwall/gjson/blob/e20a0bfa61962f4b430a2187ee5fbffe17f06856/gjson.go#L2583
 func StringToInt(s string) (int64, bool) {
 	var i int
-	sign := int64(1)
+	var n uint64
+	var sign bool
 	l := len(s)
 	if l > 0 && s[0] == '-' {
-		sign = -1
+		sign = true
 		i++
 	}
 	if i == l {
 		return 0, false
 	}
-	carryOut := uint64(0)
-	n := uint64(0)
+	if s[i] == '.' {
+		return 0, false
+	}
 	for ; i < l; i++ {
-		character := s[i]
-		if character == '.' {
-			break
+		smb := s[i] - '0'
+		if smb > 9 {
+			if smb+'0' == '.' {
+				break
+			} else {
+				return 0, false
+			}
 		}
-		if character < '0' || character > '9' {
-			return 0, false
+		n1 := n*10 + uint64(smb)
+		if n1 < n {
+			if sign {
+				return MinInt, false
+			} else {
+				return MaxInt, false
+			}
 		}
-		carryOut, n = bits.Mul64(n, 10)
-		if carryOut > 0 {
-			break
-		}
-		n, carryOut = bits.Add64(n, uint64(character-'0'), carryOut)
-		if carryOut > 0 {
-			break
-		}
+		n = n1
 	}
-	if carryOut > 0 {
-		if sign == -1 {
-			return MinInt, false
-		} else {
-			return MaxInt, false
-		}
-	}
-	if sign == 1 && n > MaxIntUint {
+	if !sign && n > MaxIntUint {
 		return MaxInt, false
 	}
 	if n > MinIntUint {
 		return MinInt, false
 	}
-	return int64(n) * sign, true
+	if sign {
+		return -int64(n), true
+	}
+	return int64(n), true
 }
 
 // StringToUint - gjson inspiration with optimizations for behavior similar to JavaScript JSON.parse
@@ -84,24 +82,23 @@ func StringToUint(s string) (n uint64, ok bool) {
 	if i == l {
 		return 0, false
 	}
-	carryOut := uint64(0)
-	for ; i < l; i++ {
-		character := s[i]
-		if character == '.' {
-			break
-		}
-		if character < '0' || character > '9' {
-			return 0, false
-		}
-		carryOut, n = bits.Mul64(n, 10)
-		if carryOut > 0 {
-			return MaxUint, false
-		}
-		n, carryOut = bits.Add64(n, uint64(character-'0'), carryOut)
-		if carryOut > 0 {
-			return MaxUint, false
-		}
+	if s[i] == '.' {
+		return 0, false
 	}
-
+	for ; i < l; i++ {
+		smb := s[i] - '0'
+		if smb > 9 {
+			if smb+'0' == '.' {
+				return n, true
+			} else {
+				return 0, false
+			}
+		}
+		n1 := n*10 + uint64(smb)
+		if n1 < n {
+			return MaxUint, false
+		}
+		n = n1
+	}
 	return n, true
 }
