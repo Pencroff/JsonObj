@@ -136,9 +136,9 @@ func BenchmarkPrimitiveOps(b *testing.B) {
 	for _, m := range tblMethod {
 		for _, t := range tblObj {
 			test_suite.CallMethod(t.o, m.method, m.v)
-			name := CreateName(t.name, m.method, m.extra)
+			nameFn := CreateSetPrimitiveNameFn(t.name, m.method, m.extra)
 
-			b.Run(name("Bool"), func(b *testing.B) {
+			b.Run(nameFn("Bool"), func(b *testing.B) {
 				n := false
 				for i := 0; i < b.N; i++ {
 					n = t.o.Bool()
@@ -147,7 +147,7 @@ func BenchmarkPrimitiveOps(b *testing.B) {
 					intResult = 1
 				}
 			})
-			b.Run(name("IsBool"), func(b *testing.B) {
+			b.Run(nameFn("IsBool"), func(b *testing.B) {
 				n := false
 				for i := 0; i < b.N; i++ {
 					n = t.o.IsBool()
@@ -156,14 +156,14 @@ func BenchmarkPrimitiveOps(b *testing.B) {
 					intResult = 1
 				}
 			})
-			b.Run(name("Int"), func(b *testing.B) {
+			b.Run(nameFn("Int"), func(b *testing.B) {
 				n := int64(0)
 				for i := 0; i < b.N; i++ {
 					n = t.o.Int()
 				}
 				intResult = int(n)
 			})
-			b.Run(name("IsInt"), func(b *testing.B) {
+			b.Run(nameFn("IsInt"), func(b *testing.B) {
 				n := false
 				for i := 0; i < b.N; i++ {
 					n = t.o.IsInt()
@@ -173,7 +173,7 @@ func BenchmarkPrimitiveOps(b *testing.B) {
 				}
 			})
 
-			b.Run(name("Uint"), func(b *testing.B) {
+			b.Run(nameFn("Uint"), func(b *testing.B) {
 				n := uint64(0)
 				for i := 0; i < b.N; i++ {
 					n = t.o.Uint()
@@ -181,7 +181,7 @@ func BenchmarkPrimitiveOps(b *testing.B) {
 				intResult = int(n)
 			})
 
-			b.Run(name("IsUint"), func(b *testing.B) {
+			b.Run(nameFn("IsUint"), func(b *testing.B) {
 				n := false
 				for i := 0; i < b.N; i++ {
 					n = t.o.IsUint()
@@ -191,7 +191,7 @@ func BenchmarkPrimitiveOps(b *testing.B) {
 				}
 			})
 
-			b.Run(name("Float"), func(b *testing.B) {
+			b.Run(nameFn("Float"), func(b *testing.B) {
 				n := 0.0
 				for i := 0; i < b.N; i++ {
 					n = t.o.Float()
@@ -199,7 +199,7 @@ func BenchmarkPrimitiveOps(b *testing.B) {
 				intResult = int(n)
 			})
 
-			b.Run(name("IsFloat"), func(b *testing.B) {
+			b.Run(nameFn("IsFloat"), func(b *testing.B) {
 				n := false
 				for i := 0; i < b.N; i++ {
 					n = t.o.IsFloat()
@@ -209,7 +209,7 @@ func BenchmarkPrimitiveOps(b *testing.B) {
 				}
 			})
 
-			b.Run(name("String"), func(b *testing.B) {
+			b.Run(nameFn("String"), func(b *testing.B) {
 				n := ""
 				for i := 0; i < b.N; i++ {
 					n = t.o.String()
@@ -217,7 +217,7 @@ func BenchmarkPrimitiveOps(b *testing.B) {
 				intResult = len(n)
 			})
 
-			b.Run(name("IsString"), func(b *testing.B) {
+			b.Run(nameFn("IsString"), func(b *testing.B) {
 				n := false
 				for i := 0; i < b.N; i++ {
 					n = t.o.IsString()
@@ -227,7 +227,7 @@ func BenchmarkPrimitiveOps(b *testing.B) {
 				}
 			})
 
-			b.Run(name("Time"), func(b *testing.B) {
+			b.Run(nameFn("Time"), func(b *testing.B) {
 				n := time.Time{}
 				for i := 0; i < b.N; i++ {
 					n = t.o.Time()
@@ -235,7 +235,7 @@ func BenchmarkPrimitiveOps(b *testing.B) {
 				intResult = int(n.Unix())
 			})
 
-			b.Run(name("IsTime"), func(b *testing.B) {
+			b.Run(nameFn("IsTime"), func(b *testing.B) {
 				n := false
 				for i := 0; i < b.N; i++ {
 					n = t.o.IsTime()
@@ -253,7 +253,7 @@ func PrintSize(v interface{}) {
 	fmt.Printf("Size: %v\n", reflect.Indirect(reflect.ValueOf(v)).Type().Size())
 }
 
-func CreateName(name, setMethod, extra string) func(prefix string) string {
+func CreateSetPrimitiveNameFn(name, setMethod, extra string) func(prefix string) string {
 	return func(dataMethod string) string {
 		return strings.TrimSpace(fmt.Sprintf("%s--%s_%s => %s", name, setMethod, extra, dataMethod))
 	}
