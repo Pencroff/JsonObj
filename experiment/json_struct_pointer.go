@@ -71,7 +71,6 @@ func (s *JsonStructPtr) SetBool(v bool) {
 	if v == true {
 		s.valType = djs.True
 	}
-	s.ptr = nil
 }
 
 func (s *JsonStructPtr) Bool() bool {
@@ -231,8 +230,9 @@ func (s *JsonStructPtr) String() string {
 		return v.Format(time.RFC3339)
 	case djs.Object:
 		return "[object]"
+	case djs.Array:
+		return "[array]"
 	}
-
 }
 
 func (s *JsonStructPtr) IsTime() bool {
@@ -247,7 +247,9 @@ func (s *JsonStructPtr) SetTime(v time.Time) {
 func (s *JsonStructPtr) Time() time.Time {
 	switch s.valType {
 	default:
-		v := s.String()
+		return time.Time{}
+	case djs.String:
+		v := *(*string)(s.ptr)
 		t, _ := time.Parse(time.RFC3339, v)
 		return t
 	case djs.Time:
@@ -273,15 +275,11 @@ func (s *JsonStructPtr) SetKey(key string, v interface{}) error {
 		return djs.NotObjectError
 	}
 	m := *(*map[string]djs.JsonStructOps)(s.ptr)
-	vjs, ok := m[key]
-	if !ok {
-		vjs = &JsonStructPtr{}
-	}
-	vjs, err := s.populateVjs(v, vjs)
+	pjs, err := s.populatePjs(v, m[key])
 	if err != nil {
 		return err
 	}
-	m[key] = vjs
+	m[key] = pjs
 	return nil
 }
 
@@ -328,6 +326,9 @@ func (s *JsonStructPtr) IsObject() bool {
 }
 
 func (s *JsonStructPtr) AsObject() {
+	if s.valType == djs.Object {
+		return
+	}
 	s.valType = djs.Object
 	s.ptr = unsafe.Pointer(&map[string]djs.JsonStructOps{})
 }
@@ -343,7 +344,7 @@ func (s *JsonStructPtr) Push(v interface{}) error {
 		return djs.NotArrayError
 	}
 	m := *(*[]djs.JsonStructOps)(s.ptr)
-	el, err := s.populateVjs(v, nil)
+	el, err := s.populatePjs(v, nil)
 	if err != nil {
 		return err
 	}
@@ -391,15 +392,15 @@ func (s *JsonStructPtr) SetIndex(i int, v interface{}) error {
 	if i < 0 {
 		return djs.IndexOutOfRangeError
 	}
+	el, err := s.populatePjs(v, nil)
+	if err != nil {
+		return err
+	}
 	m := *(*[]djs.JsonStructOps)(s.ptr)
 	l := len(m)
 	if i >= l {
 		m = append(m, make([]djs.JsonStructOps, i-l+1)...)
 		s.ptr = unsafe.Pointer(&m)
-	}
-	el, err := s.populateVjs(v, nil)
-	if err != nil {
-		return err
 	}
 	m[i] = el
 	return nil
@@ -422,6 +423,9 @@ func (s *JsonStructPtr) IsArray() bool {
 }
 
 func (s *JsonStructPtr) AsArray() {
+	if s.valType == djs.Array {
+		return
+	}
 	s.valType = djs.Array
 	s.ptr = unsafe.Pointer(&[]JsonStructPtr{})
 }
@@ -430,64 +434,62 @@ func (s *JsonStructPtr) AsArray() {
 
 // region Helper functions
 
-func (s *JsonStructPtr) populateVjs(v interface{}, vjs djs.JsonStructOps) (djs.JsonStructOps, error) {
+func (s *JsonStructPtr) populatePjs(v interface{}, pjs djs.JsonStructOps) (djs.JsonStructOps, error) {
 	switch data := v.(type) {
-	case JsonStructPtr:
-		vjs = &data
-	case *JsonStructPtr:
-		vjs = data
+	case djs.JsonStructOps:
+		pjs = data
 	case nil:
-		vjs = resolveValue(vjs)
-		vjs.SetNull()
+		pjs = resolvePointer(pjs)
+		pjs.SetNull()
 	case bool:
-		vjs = resolveValue(vjs)
-		vjs.SetBool(data)
+		pjs = resolvePointer(pjs)
+		pjs.SetBool(data)
 	case int8:
-		vjs = resolveValue(vjs)
-		vjs.SetInt(int64(data))
+		pjs = resolvePointer(pjs)
+		pjs.SetInt(int64(data))
 	case int16:
-		vjs = resolveValue(vjs)
-		vjs.SetInt(int64(data))
+		pjs = resolvePointer(pjs)
+		pjs.SetInt(int64(data))
 	case int32:
-		vjs = resolveValue(vjs)
-		vjs.SetInt(int64(data))
+		pjs = resolvePointer(pjs)
+		pjs.SetInt(int64(data))
 	case int64:
-		vjs = resolveValue(vjs)
-		vjs.SetInt(data)
+		pjs = resolvePointer(pjs)
+		pjs.SetInt(data)
 	case int:
-		vjs = resolveValue(vjs)
-		vjs.SetInt(int64(data))
+		pjs = resolvePointer(pjs)
+		pjs.SetInt(int64(data))
 	case uint8:
-		vjs = resolveValue(vjs)
-		vjs.SetUint(uint64(data))
+		pjs = resolvePointer(pjs)
+		pjs.SetUint(uint64(data))
 	case uint16:
-		vjs = resolveValue(vjs)
-		vjs.SetUint(uint64(data))
+		pjs = resolvePointer(pjs)
+		pjs.SetUint(uint64(data))
 	case uint32:
-		vjs = resolveValue(vjs)
-		vjs.SetUint(uint64(data))
+		pjs = resolvePointer(pjs)
+		pjs.SetUint(uint64(data))
 	case uint64:
-		vjs = resolveValue(vjs)
-		vjs.SetUint(data)
+		pjs = resolvePointer(pjs)
+		pjs.SetUint(data)
 	case uint:
-		vjs = resolveValue(vjs)
-		vjs.SetUint(uint64(data))
+		pjs = resolvePointer(pjs)
+		pjs.SetUint(uint64(data))
 	case float64:
-		vjs = resolveValue(vjs)
-		vjs.SetFloat(data)
+		pjs = resolvePointer(pjs)
+		pjs.SetFloat(data)
 	case string:
-		vjs = resolveValue(vjs)
-		vjs.SetString(data)
+		pjs = resolvePointer(pjs)
+		pjs.SetString(data)
 	case time.Time:
-		vjs = resolveValue(vjs)
-		vjs.SetTime(data)
+		pjs = resolvePointer(pjs)
+		pjs.SetTime(data)
 	default:
 		return nil, djs.UnsupportedTypeError
 	}
-	return vjs, nil
+	return pjs, nil
 }
 
-func resolveValue(v djs.JsonStructOps) djs.JsonStructOps {
+func resolvePointer(v djs.JsonStructOps) djs.JsonStructOps {
 	if v == nil {
 		return &JsonStructPtr{}
 	}

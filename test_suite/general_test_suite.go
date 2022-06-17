@@ -86,10 +86,11 @@ func (s *GeneralOpsTestSuite) TestSetKeyNullObjArr() {
 		resValue djs.JsonStructOps
 		isMethod string
 		keyType  djs.Type
+		str      string
 	}{
-		{"a", nil, null, "IsNull", djs.Null},
-		{"b", obj, obj, "IsObject", djs.Object},
-		{"c", arr, arr, "IsArray", djs.Array},
+		{"a", nil, null, "IsNull", djs.Null, "null"},
+		{"b", obj, obj, "IsObject", djs.Object, "[object]"},
+		{"c", arr, arr, "IsArray", djs.Array, "[array]"},
 	}
 
 	s.Equal(true, s.js.IsNull())
@@ -97,11 +98,12 @@ func (s *GeneralOpsTestSuite) TestSetKeyNullObjArr() {
 	for _, el := range tbl {
 		err := s.js.SetKey(el.key, el.value)
 		v := s.js.GetKey(el.key)
-		s.NoError(err)
+		s.NoError(err, "SetKey(%s, %s) => %v", el.key, el.str, err)
 		s.Equal(el.keyType.String(), v.Type().String(), "[%s]: %s != %s", el.key, el.keyType, v.Type())
 		s.Equal(true, s.js.HasKey(el.key))
 		s.Equal(el.resValue.Value(), v.Value())
 		s.Equal(true, CallMethod(v, el.isMethod))
+		s.Equal(el.str, v.String())
 	}
 }
 

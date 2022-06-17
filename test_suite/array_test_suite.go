@@ -132,6 +132,7 @@ func (s *ArrayOpsTestSuite) TestSetIndex() {
 	s.Equal(nil, e)
 	e = s.js.SetIndex(-1, 3)
 	s.ErrorIs(e, djs.IndexOutOfRangeError)
+	s.Equal(11, s.js.Size())
 	v := s.js.GetIndex(0)
 	s.Equal(int64(1), v.Value())
 	v = s.js.GetIndex(1)
@@ -147,4 +148,12 @@ func (s *ArrayOpsTestSuite) TestSetIndex() {
 	js := s.factory()
 	e = js.SetIndex(0, 1)
 	s.ErrorIs(e, djs.NotArrayError)
+}
+
+func (s *ObjectOpsTestSuite) TestSetIndexUnsupportedType() {
+	t := map[string]interface{}{"boolKey": true, "intKey": -10, "uintKey": 10}
+	s.js.AsArray()
+	err := s.js.SetIndex(0, t)
+	s.ErrorIs(err, djs.UnsupportedTypeError)
+	s.Equal(0, s.js.Size())
 }

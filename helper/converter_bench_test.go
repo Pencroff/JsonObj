@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"fmt"
 	"math"
 	"strconv"
 	"testing"
@@ -46,6 +47,25 @@ func BenchmarkFloatToIntConverter(b *testing.B) {
 	})
 }
 
+/*
+λ go test -bench=BenchmarkStringToIntConverter
+goos: windows
+goarch: amd64
+pkg: github.com/Pencroff/JsonStruct/helper
+cpu: Intel(R) Core(TM) i9-8950HK CPU @ 2.90GHz
+BenchmarkStringToIntConverter/StringToUint-12           63075232                18.42 ns/op
+BenchmarkStringToIntConverter/ParseUint-12              41217283                33.59 ns/op
+BenchmarkStringToIntConverter/ParseUint(0)-12           40003066                29.64 ns/op
+
+BenchmarkStringToIntConverter/StringToInt-12            79572430                17.95 ns/op
+BenchmarkStringToIntConverter/strconv.Atoi-12           34287967                38.27 ns/op
+BenchmarkStringToIntConverter/ParseInt-12               34227234                33.97 ns/op
+BenchmarkStringToIntConverter/ParseInt(0)-12            34930328                31.58 ns/op
+BenchmarkStringToIntConverter/fmt.Sscan-12               1381633               861.6 ns/op
+PASS
+ok      github.com/Pencroff/JsonStruct/helper   11.256s
+*/
+
 func BenchmarkStringToIntConverter(b *testing.B) {
 	str := "-9223372036854775808"
 	ustr := "18446744073709551615"
@@ -70,13 +90,7 @@ func BenchmarkStringToIntConverter(b *testing.B) {
 		}
 		uresult = n
 	})
-	b.Run("Separator", func(b *testing.B) {
-		n := 0
-		for i := 0; i < b.N; i++ {
-			n = b.N
-		}
-		result = int64(n)
-	})
+	fmt.Println("")
 	b.Run("StringToInt", func(b *testing.B) {
 		n := int64(0)
 		for i := 0; i < b.N; i++ {
@@ -107,12 +121,12 @@ func BenchmarkStringToIntConverter(b *testing.B) {
 		result = n
 	})
 	// Takes  860 - 890 ns/op, compare around 30 - 40 ns/op for rest of the benchmarks
-	//b.Run("fmt.Sscan", func(b *testing.B) {
-	//	n := 0
-	//	for i := 0; i < b.N; i++ {
-	//		fmt.Sscan(str, &n)
-	//	}
-	//	result = n
-	//})
+	b.Run("fmt.Sscan", func(b *testing.B) {
+		n := 0
+		for i := 0; i < b.N; i++ {
+			fmt.Sscan(str, &n)
+		}
+		result = int64(n)
+	})
 
 }
