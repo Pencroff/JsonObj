@@ -1,11 +1,14 @@
 package JsonStruct
 
 import (
+	h "github.com/Pencroff/JsonStruct/helper"
+	"strconv"
 	"time"
+	"unsafe"
 )
 
 // JsonStruct is a struct that can be converted to JSON.
-//// It implements the json.Marshaler and json.Unmarshaler interfaces.
+// It implements the json.Marshaler and json.Unmarshaler interfaces.
 //// It also implements the sql.Scanner and sql.Valuer interfaces.
 // It supports JSON types like:
 // 	- string
@@ -16,16 +19,9 @@ import (
 // 	- Object
 // 	- Array
 type JsonStruct struct {
-	m map[string]*JsonStruct
-	a []*JsonStruct
-
 	valType Type
-
 	// data
-	intNum   int
-	floatNum float64
-	str      string
-	dt       time.Time
+	ptr unsafe.Pointer
 }
 
 //func (s *JsonStruct) ToJson() string {
@@ -48,66 +44,310 @@ type JsonStruct struct {
 //	return "null"
 //}
 
-func (s *JsonStruct) Set(key string, value interface{}) (err error) {
-	if s.valType != Object {
-		s.AsObject()
-	}
-	v, ok := s.m[key]
-	if !ok {
-		v = &JsonStruct{}
-	}
-	switch data := value.(type) {
-	case nil:
-	case JsonStruct:
-		v = &data
-	case *JsonStruct:
-		v = data
-	case int:
-		v.SetInt(data)
-	case float64:
-		v.SetFloat(data)
-	case bool:
-		v.SetBool(data)
-	case string:
-		v.SetString(data)
-	case time.Time:
-		v.SetTime(data)
+func (s *JsonStruct) Type() Type {
+	return s.valType
+}
+
+func (s *JsonStruct) Value() interface{} {
+	switch s.valType {
 	default:
-		return UnsupportedTypeError
+		return nil
+	case False:
+		return false
+	case True:
+		return true
+	case Int:
+		return *(*int64)(s.ptr)
+	case Uint:
+		return *(*uint64)(s.ptr)
+	case Float:
+		return *(*float64)(s.ptr)
+	case String:
+		return *(*string)(s.ptr)
+	case Time:
+		return *(*time.Time)(s.ptr)
+	case Object:
+		return *(*map[string]JsonStructOps)(s.ptr)
+	case Array:
+		return *(*[]JsonStructOps)(s.ptr)
 	}
-	s.m[key] = v
+}
+
+func (s *JsonStruct) Size() int {
+	switch s.valType {
+	default:
+		return -1
+	case String:
+		v := *(*string)(s.ptr)
+		return len(v)
+	case Object:
+		v := *(*map[string]JsonStructOps)(s.ptr)
+		return len(v)
+	case Array:
+		v := *(*[]JsonStructOps)(s.ptr)
+		return len(v)
+	}
+}
+
+//region Primitive operations
+
+func (s *JsonStruct) IsBool() bool {
+	return s.valType == False || s.valType == True
+}
+
+func (s *JsonStruct) SetBool(v bool) {
+	s.valType = False
+	if v == true {
+		s.valType = True
+	}
+}
+
+func (s *JsonStruct) Bool() bool {
+	switch s.valType {
+	default:
+		return false
+	case True:
+		return true
+	case Int:
+		v := *(*int)(s.ptr)
+		return v != 0
+	case Uint:
+		v := *(*uint)(s.ptr)
+		return v != 0
+	case Float:
+		v := *(*float64)(s.ptr)
+		return v != 0
+	case String:
+		v := *(*string)(s.ptr)
+		return v != ""
+	case Time:
+		v := *(*time.Time)(s.ptr)
+		return v.UnixMilli() != 0
+	}
+}
+
+func (s *JsonStruct) IsNumber() bool {
+	return s.valType == Int || s.valType == Uint || s.valType == Float
+}
+
+func (s *JsonStruct) IsInt() bool {
+	return s.valType == Int
+}
+
+func (s *JsonStruct) SetInt(v int64) {
+	s.valType = Int
+	s.ptr = unsafe.Pointer(&v)
+}
+
+func (s *JsonStruct) Int() int64 {
+	switch s.valType {
+	default:
+		return 0
+	case True:
+		return 1
+	case Int:
+		return *(*int64)(s.ptr)
+	case Uint:
+		return *(*int64)(s.ptr)
+	case Float:
+		v := *(*float64)(s.ptr)
+		return int64(v)
+	case String:
+		v := *(*string)(s.ptr)
+		n, _ := h.StringToInt(v)
+		return n
+	case Time:
+		v := *(*time.Time)(s.ptr)
+		return v.UnixMilli()
+	}
+}
+
+func (s *JsonStruct) IsUint() bool {
+	return s.valType == Uint
+}
+
+func (s *JsonStruct) SetUint(v uint64) {
+	s.valType = Uint
+	s.ptr = unsafe.Pointer(&v)
+}
+
+func (s *JsonStruct) Uint() uint64 {
+	switch s.valType {
+	default:
+		return 0
+	case True:
+		return 1
+	case Int:
+		return *(*uint64)(s.ptr)
+	case Uint:
+		return *(*uint64)(s.ptr)
+	case Float:
+		v := *(*float64)(s.ptr)
+		return uint64(v)
+	case String:
+		v := *(*string)(s.ptr)
+		n, _ := h.StringToUint(v)
+		return n
+	case Time:
+		v := *(*time.Time)(s.ptr)
+		return uint64(v.UnixMilli())
+	}
+}
+
+func (s *JsonStruct) IsFloat() bool {
+	return s.valType == Float
+}
+
+func (s *JsonStruct) SetFloat(v float64) {
+	s.valType = Float
+	s.ptr = unsafe.Pointer(&v)
+}
+
+func (s *JsonStruct) Float() float64 {
+	switch s.valType {
+	default:
+		return 0
+	case True:
+		return 1
+	case Int:
+		v := *(*int)(s.ptr)
+		return float64(v)
+	case Uint:
+		v := *(*uint)(s.ptr)
+		return float64(v)
+	case Float:
+		return *(*float64)(s.ptr)
+	case String:
+		v := *(*string)(s.ptr)
+		n, _ := strconv.ParseFloat(v, 64)
+		return n
+	}
+}
+
+func (s *JsonStruct) IsString() bool {
+	return s.valType == String
+}
+
+func (s *JsonStruct) SetString(v string) {
+	s.valType = String
+	s.ptr = unsafe.Pointer(&v)
+}
+
+func (s *JsonStruct) String() string {
+	switch s.valType {
+	default:
+		return ""
+	case Null:
+		return "null"
+	case False:
+		return "false"
+	case True:
+		return "true"
+	case Int:
+		v := *(*int64)(s.ptr)
+		return strconv.FormatInt(v, 10)
+	case Uint:
+		v := *(*uint64)(s.ptr)
+		return strconv.FormatUint(v, 10)
+	case Float:
+		v := *(*float64)(s.ptr)
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	case String:
+		return *(*string)(s.ptr)
+	case Time:
+		v := *(*time.Time)(s.ptr)
+		return v.Format(time.RFC3339)
+	case Object:
+		return "[object]"
+	case Array:
+		return "[array]"
+	}
+}
+
+func (s *JsonStruct) IsTime() bool {
+	return s.valType == Time
+}
+
+func (s *JsonStruct) SetTime(v time.Time) {
+	s.valType = Time
+	s.ptr = unsafe.Pointer(&v)
+}
+
+func (s *JsonStruct) Time() time.Time {
+	switch s.valType {
+	default:
+		return time.Time{}
+	case String:
+		v := *(*string)(s.ptr)
+		t, _ := time.Parse(time.RFC3339, v)
+		return t
+	case Time:
+		return *(*time.Time)(s.ptr)
+	}
+}
+
+func (s *JsonStruct) IsNull() bool {
+	return s.valType == Null
+}
+
+func (s *JsonStruct) SetNull() {
+	s.valType = Null
+	s.ptr = nil
+}
+
+//endregion Primitive operations
+
+//region Object operations
+
+func (s *JsonStruct) SetKey(key string, v interface{}) error {
+	if s.valType != Object {
+		return NotObjectError
+	}
+	m := *(*map[string]JsonStructOps)(s.ptr)
+	pjs, err := s.populatePjs(v, m[key])
+	if err != nil {
+		return err
+	}
+	m[key] = pjs
 	return nil
 }
 
-func (s *JsonStruct) Get(key string) *JsonStruct {
-	if s.valType == Object {
-		return s.m[key]
+func (s *JsonStruct) GetKey(key string) JsonStructOps {
+	if s.valType != Object {
+		return nil
 	}
-	return nil
+	m := *(*map[string]JsonStructOps)(s.ptr)
+	return m[key]
 }
 
-func (s *JsonStruct) Remove(key string) bool {
-	_, ok := s.m[key]
-	delete(s.m, key)
+func (s *JsonStruct) RemoveKey(key string) JsonStructOps {
+	m := *(*map[string]JsonStructOps)(s.ptr)
+	v, _ := m[key]
+	delete(m, key)
+	return v
+}
+
+func (s *JsonStruct) HasKey(key string) bool {
+	if s.valType != Object {
+		return false
+	}
+	m := *(*map[string]JsonStructOps)(s.ptr)
+	_, ok := m[key]
 	return ok
 }
 
-func (s *JsonStruct) Has(key string) bool {
-	_, ok := s.m[key]
-	return ok
-}
-
-func (s JsonStruct) Keys() []string {
-	if s.valType == Object {
-		keys := make([]string, len(s.m))
-		var idx uint64
-		for k := range s.m {
-			keys[idx] = k
-			idx++
-		}
-		return keys
+func (s *JsonStruct) Keys() []string {
+	if s.valType != Object {
+		return []string{}
 	}
-	return []string{}
+	m := *(*map[string]JsonStructOps)(s.ptr)
+	keys := make([]string, len(m))
+	var idx uint64
+	for k := range m {
+		keys[idx] = k
+		idx++
+	}
+	return keys
 }
 
 func (s *JsonStruct) IsObject() bool {
@@ -115,11 +355,96 @@ func (s *JsonStruct) IsObject() bool {
 }
 
 func (s *JsonStruct) AsObject() {
-	if s.valType != Object {
-		s.reset()
-		s.m = make(map[string]*JsonStruct)
-		s.valType = Object
+	if s.valType == Object {
+		return
 	}
+	s.valType = Object
+	s.ptr = unsafe.Pointer(&map[string]JsonStructOps{})
+}
+
+//endregion Object operations
+
+//region Array operations
+
+// https://github.com/golang/go/wiki/SliceTricks
+
+func (s *JsonStruct) Push(v interface{}) error {
+	if s.valType != Array {
+		return NotArrayError
+	}
+	m := *(*[]JsonStructOps)(s.ptr)
+	el, err := s.populatePjs(v, nil)
+	if err != nil {
+		return err
+	}
+	m = append(m, el)
+	s.ptr = unsafe.Pointer(&m)
+	return nil
+}
+
+func (s *JsonStruct) Pop() JsonStructOps {
+	if s.valType != Array {
+		return nil
+	}
+	m := *(*[]JsonStructOps)(s.ptr)
+	lIdx := len(m) - 1
+	if lIdx == -1 {
+		return nil
+	}
+	v := m[lIdx]
+	m[lIdx] = nil
+	m = m[:lIdx]
+	s.ptr = unsafe.Pointer(&m)
+	return v
+}
+
+func (s *JsonStruct) Shift() JsonStructOps {
+	if s.valType != Array {
+		return nil
+	}
+	m := *(*[]JsonStructOps)(s.ptr)
+	l := len(m)
+	if l == 0 {
+		return nil
+	}
+	v := m[0]
+	m[0] = nil
+	m = m[1:]
+	s.ptr = unsafe.Pointer(&m)
+	return v
+}
+
+func (s *JsonStruct) SetIndex(i int, v interface{}) error {
+	if s.valType != Array {
+		return NotArrayError
+	}
+	if i < 0 {
+		return IndexOutOfRangeError
+	}
+	el, err := s.populatePjs(v, nil)
+	if err != nil {
+		return err
+	}
+	m := *(*[]JsonStructOps)(s.ptr)
+	l := len(m)
+	if i >= l {
+		m = append(m, make([]JsonStructOps, i-l+1)...)
+		s.ptr = unsafe.Pointer(&m)
+	}
+	m[i] = el
+	return nil
+}
+
+func (s *JsonStruct) GetIndex(i int) JsonStructOps {
+	if s.valType != Array {
+		return nil
+	}
+	m := *(*[]JsonStructOps)(s.ptr)
+	l := len(m)
+	if i >= l {
+		return nil
+	}
+	return m[i]
 }
 
 func (s *JsonStruct) IsArray() bool {
@@ -127,119 +452,79 @@ func (s *JsonStruct) IsArray() bool {
 }
 
 func (s *JsonStruct) AsArray() {
-	if s.valType != Array {
-		s.reset()
-		s.a = make([]*JsonStruct, 0)
-		s.valType = Array
+	if s.valType == Array {
+		return
 	}
+	s.valType = Array
+	s.ptr = unsafe.Pointer(&[]JsonStruct{})
 }
 
-//region Null ops
+//endregion Array operations
 
-func (s *JsonStruct) IsNull() bool {
-	return s.valType == Null
-}
+// region Helper functions
 
-func (s *JsonStruct) SetNull() {
-	s.reset()
-}
-
-//endregion
-
-//region Number ops
-func (s *JsonStruct) IsNumber() bool {
-	return s.valType == Int || s.valType == Uint || s.valType == Float
-}
-
-func (s *JsonStruct) SetInt(i int) {
-	s.reset()
-	s.valType = Int
-	s.intNum = i
-}
-func (s *JsonStruct) Int() int {
-	return s.intNum
-}
-
-func (s *JsonStruct) IsInt() bool {
-	return s.valType == Int
-}
-
-func (s *JsonStruct) SetFloat(i float64) {
-	s.reset()
-	s.valType = Float
-	s.floatNum = i
-}
-func (s *JsonStruct) Float() float64 {
-	return s.floatNum
-}
-
-func (s *JsonStruct) IsFloat() bool {
-	return s.valType == Float
-}
-
-//endregion Number ops
-
-//region Boolean ops
-func (s *JsonStruct) SetBool(v bool) {
-	s.reset()
-	s.valType = False
-	if v {
-		s.valType = True
+func (s *JsonStruct) populatePjs(v interface{}, pjs JsonStructOps) (JsonStructOps, error) {
+	switch data := v.(type) {
+	case JsonStructOps:
+		pjs = data
+	case nil:
+		pjs = resolvePointer(pjs)
+		pjs.SetNull()
+	case bool:
+		pjs = resolvePointer(pjs)
+		pjs.SetBool(data)
+	case int8:
+		pjs = resolvePointer(pjs)
+		pjs.SetInt(int64(data))
+	case int16:
+		pjs = resolvePointer(pjs)
+		pjs.SetInt(int64(data))
+	case int32:
+		pjs = resolvePointer(pjs)
+		pjs.SetInt(int64(data))
+	case int64:
+		pjs = resolvePointer(pjs)
+		pjs.SetInt(data)
+	case int:
+		pjs = resolvePointer(pjs)
+		pjs.SetInt(int64(data))
+	case uint8:
+		pjs = resolvePointer(pjs)
+		pjs.SetUint(uint64(data))
+	case uint16:
+		pjs = resolvePointer(pjs)
+		pjs.SetUint(uint64(data))
+	case uint32:
+		pjs = resolvePointer(pjs)
+		pjs.SetUint(uint64(data))
+	case uint64:
+		pjs = resolvePointer(pjs)
+		pjs.SetUint(data)
+	case uint:
+		pjs = resolvePointer(pjs)
+		pjs.SetUint(uint64(data))
+	case float64:
+		pjs = resolvePointer(pjs)
+		pjs.SetFloat(data)
+	case string:
+		pjs = resolvePointer(pjs)
+		pjs.SetString(data)
+	case time.Time:
+		pjs = resolvePointer(pjs)
+		pjs.SetTime(data)
+	default:
+		return nil, UnsupportedTypeError
 	}
-}
-func (s *JsonStruct) Bool() bool {
-	return s.intNum == 1
+	return pjs, nil
 }
 
-func (s *JsonStruct) IsBool() bool {
-	return s.valType == False || s.valType == True
+func resolvePointer(v JsonStructOps) JsonStructOps {
+	if v == nil {
+		return &JsonStruct{}
+	}
+	return v
 }
 
-//endregion Boolean ops
+// endregion Helper functions
 
-//region String ops
-func (s *JsonStruct) SetString(v string) {
-	s.reset()
-	s.valType = String
-	s.str = v
-}
-func (s *JsonStruct) String() string {
-	return s.str
-}
-
-func (s *JsonStruct) IsString() bool {
-	return s.valType == String
-}
-
-//endregion String ops
-
-//region Time ops
-
-func (s *JsonStruct) SetTime(v time.Time) {
-	s.reset()
-	s.valType = Time
-	s.dt = v
-}
-func (s *JsonStruct) Time() time.Time {
-	return s.dt
-}
-
-func (s *JsonStruct) IsTime() bool {
-	return s.valType == Time
-}
-
-//endregion
-
-//region Private methods
-
-func (s *JsonStruct) reset() {
-	s.valType = Null
-	s.intNum = 0
-	s.floatNum = 0
-	s.str = ""
-	s.dt = time.Time{}
-	s.m = nil
-	s.a = nil
-}
-
-//endregion Private methods
+//endregion JsonStructPtr

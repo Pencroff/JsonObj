@@ -12,3 +12,7 @@ func JsonStructValueFactory() djs.JsonStructOps {
 func JsonStructPointerFactory() djs.JsonStructOps {
 	return &experiment.JsonStructPtr{}
 }
+
+func JsonStructFactory() djs.JsonStructOps {
+	return &djs.JsonStruct{}
+}

@@ -113,7 +113,7 @@ type JsonStructOps interface {
 }
 
 var UnsupportedTypeError = errors.
-	New("unsupported value type, resolved as null")
-var NotObjectError = errors.New("not an object, set explicitly")
-var NotArrayError = errors.New("not an array, set explicitly")
-var IndexOutOfRangeError = errors.New("index out of range")
+	New("unsupported value type, resolved as null, JsonStruct")
+var NotObjectError = errors.New("not an object, set explicitly, JsonStruct")
+var NotArrayError = errors.New("not an array, set explicitly, JsonStruct")
+var IndexOutOfRangeError = errors.New("index out of range, JsonStruct")

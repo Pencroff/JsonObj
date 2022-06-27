@@ -72,7 +72,11 @@ During experiment was compared value based and pointer based JsonStruct implemen
 
 #### Summary
 
+The value implementation is faster than pointer implementation.
+The difference is due to the fact that value implementation is less memory efficient.
 Value implementation should expect to consume approximately 2 time more memory than pointer implementation (depends on stored values).
+The performance of pointer implementation significantly slow in array implementation the rest operations in same range or similar to value implementation.
+For performance please handle maps and slices.
 
 ### How to increase version
 

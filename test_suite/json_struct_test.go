@@ -52,3 +52,27 @@ func TestJsonStructPointer_ArrayOps(t *testing.T) {
 	s.SetFactory(JsonStructPointerFactory)
 	suite.Run(t, s)
 }
+
+func TestJsonStruct_GeneralOpsTestSuite(t *testing.T) {
+	s := new(GeneralOpsTestSuite)
+	s.SetFactory(JsonStructFactory)
+	suite.Run(t, s)
+}
+
+func TestJsonStruct_PrimitiveOpsTestSuite(t *testing.T) {
+	s := new(PrimitiveOpsTestSuite)
+	s.SetFactory(JsonStructFactory)
+	suite.Run(t, s)
+}
+
+func TestJsonStruct_ObjectOps(t *testing.T) {
+	s := new(ObjectOpsTestSuite)
+	s.SetFactory(JsonStructFactory)
+	suite.Run(t, s)
+}
+
+func TestJsonStruct_ArrayOps(t *testing.T) {
+	s := new(ArrayOpsTestSuite)
+	s.SetFactory(JsonStructFactory)
+	suite.Run(t, s)
+}
