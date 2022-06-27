@@ -1,4 +1,4 @@
-package test_suite
+package helper
 
 import "reflect"
 

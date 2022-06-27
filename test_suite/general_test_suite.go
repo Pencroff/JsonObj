@@ -2,6 +2,7 @@ package test_suite
 
 import (
 	djs "github.com/Pencroff/JsonStruct"
+	"github.com/Pencroff/JsonStruct/helper"
 	"github.com/stretchr/testify/suite"
 	"time"
 )
@@ -43,7 +44,7 @@ func (s *GeneralOpsTestSuite) TestTypeValue() {
 
 	s.Equal(true, s.js.IsNull())
 	for _, el := range tbl {
-		CallMethod(s.js, el.method, el.value)
+		helper.CallMethod(s.js, el.method, el.value)
 
 		s.Equal(el.valueType, s.js.Type(), "%s(%v) => %v type", el.method, el.value, el.valueType)
 		s.Equal(el.value, s.js.Value(), "%s(%v) => %v type", el.method, el.value, el.valueType)
@@ -66,11 +67,11 @@ func (s *GeneralOpsTestSuite) TestAsTypeValue() {
 
 	s.Equal(true, s.js.IsNull())
 	for _, el := range tbl {
-		CallMethod(s.js, el.method)
+		helper.CallMethod(s.js, el.method)
 
 		s.Equal(el.valueType, s.js.Type())
 		s.Equal(el.value, s.js.Value())
-		s.Equal(true, CallMethod(s.js, el.isMethod))
+		s.Equal(true, helper.CallMethod(s.js, el.isMethod))
 	}
 }
 
@@ -102,7 +103,7 @@ func (s *GeneralOpsTestSuite) TestSetKeyNullObjArr() {
 		s.Equal(el.keyType.String(), v.Type().String(), "[%s]: %s != %s", el.key, el.keyType, v.Type())
 		s.Equal(true, s.js.HasKey(el.key))
 		s.Equal(el.resValue.Value(), v.Value())
-		s.Equal(true, CallMethod(v, el.isMethod))
+		s.Equal(true, helper.CallMethod(v, el.isMethod))
 		s.Equal(el.str, v.String())
 	}
 }
@@ -127,7 +128,7 @@ func (s *GeneralOpsTestSuite) TestSizePrimitive() {
 		{time.Now(), -1, "SetTime"},
 	}
 	for _, el := range tbl {
-		CallMethod(s.js, el.method, el.value)
+		helper.CallMethod(s.js, el.method, el.value)
 
 		s.Equal(el.size, s.js.Size(), "len(%v) => %v", el.value, el.size)
 	}

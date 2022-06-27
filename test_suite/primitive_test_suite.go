@@ -63,7 +63,7 @@ func (s *PrimitiveOpsTestSuite) TestIsMethods() {
 		{"hello", "SetString", false, false, false, false, false, false, true},
 	}
 	for _, el := range tbl {
-		CallMethod(s.js, el.setMethod, el.val)
+		helper.CallMethod(s.js, el.setMethod, el.val)
 		s.Equal(el.isBool, s.js.IsBool())
 		s.Equal(el.isNumber, s.js.IsNumber())
 		s.Equal(el.isInt, s.js.IsInt())
@@ -92,18 +92,15 @@ func (s *PrimitiveOpsTestSuite) TestGetSetValueTable() {
 		{"hello", "hello", "SetString", "String"},
 	}
 	for _, el := range tbl {
-		CallMethod(s.js, el.setMethod, el.val)
-		s.Equal(el.res, CallMethod(s.js, el.getMethod))
+		helper.CallMethod(s.js, el.setMethod, el.val)
+		s.Equal(el.res, helper.CallMethod(s.js, el.getMethod))
 	}
 }
 
 func (s *PrimitiveOpsTestSuite) TestGetMethods() {
 	tm := time.Date(2015, 5, 14, 12, 34, 56, 379000000, time.FixedZone("CEST", 2*60*60))
-	fmt.Printf("%v\n", tm.Format(time.RFC3339))
 	unixStart := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
-	fmt.Printf("%v\n", unixStart.Format(time.RFC3339))
 	emptyTime := time.Time{}
-	fmt.Printf("%v\n", emptyTime.Format(time.RFC3339))
 	tbl := []struct {
 		idx       string
 		val       interface{}
@@ -147,7 +144,7 @@ func (s *PrimitiveOpsTestSuite) TestGetMethods() {
 		{"string:4", "-3.1415", "SetString", true, -3, 0, -3.1415, emptyTime, "-3.1415"},
 	}
 	for _, el := range tbl {
-		CallMethod(s.js, el.setMethod, el.val)
+		helper.CallMethod(s.js, el.setMethod, el.val)
 		s.Equal(el.boolVal, s.js.Bool(), "#%s %s(%v) => Bool() = %v != %v", el.idx, el.setMethod, el.val, s.js.Bool(), el.boolVal)
 		s.Equal(el.intVal, s.js.Int(), "#%s %s(%v) => Int() = %v != %v", el.idx, el.setMethod, el.val, s.js.Int(), el.intVal)
 		s.Equal(el.uintVal, s.js.Uint(), "#%s %s(%v) => Uint() = %v != %v", el.idx, el.setMethod, el.val, s.js.Uint(), el.uintVal)
