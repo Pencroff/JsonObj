@@ -10,11 +10,11 @@ import (
 
 type PrimitiveOpsTestSuite struct {
 	suite.Suite
-	factory func() djs.JsonStructOps
-	js      djs.JsonStructOps
+	factory func() djs.JStructOps
+	js      djs.JStructOps
 }
 
-func (s *PrimitiveOpsTestSuite) SetFactory(fn func() djs.JsonStructOps) {
+func (s *PrimitiveOpsTestSuite) SetFactory(fn func() djs.JStructOps) {
 	s.factory = fn
 }
 

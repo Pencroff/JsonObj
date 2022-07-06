@@ -1,7 +1,7 @@
 package JsonStruct
 
 import (
-	"errors"
+	"encoding/json"
 	"time"
 )
 
@@ -91,29 +91,32 @@ type PrimitiveOps interface {
 
 type ObjectOps interface {
 	SetKey(string, interface{}) error
-	GetKey(string) JsonStructOps
-	RemoveKey(string) JsonStructOps
+	GetKey(string) JStructOps
+	RemoveKey(string) JStructOps
 	HasKey(string) bool
 	Keys() []string
 }
 
 type ArrayOps interface {
 	Push(interface{}) error
-	Pop() JsonStructOps
-	Shift() JsonStructOps
+	Pop() JStructOps
+	Shift() JStructOps
 	SetIndex(int, interface{}) error
-	GetIndex(int) JsonStructOps
+	GetIndex(int) JStructOps
 }
 
-type JsonStructOps interface {
+type JStructOps interface {
 	GeneralOps
 	PrimitiveOps
 	ObjectOps
 	ArrayOps
 }
 
-var UnsupportedTypeError = errors.
-	New("unsupported value type, resolved as null, JsonStruct")
-var NotObjectError = errors.New("not an object, set explicitly, JsonStruct")
-var NotArrayError = errors.New("not an array, set explicitly, JsonStruct")
-var IndexOutOfRangeError = errors.New("index out of range, JsonStruct")
+type JStructConvertibleOps interface {
+	GeneralOps
+	PrimitiveOps
+	ObjectOps
+	ArrayOps
+	json.Unmarshaler
+	json.Marshaler
+}

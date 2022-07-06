@@ -4,6 +4,8 @@ Json / JS dynamic structure. Play with Go.
 
 [Docs](https://pkg.go.dev/github.com/Pencroff/JsonStruct)
 
+[Standard](https://www.ecma-international.org/publications-and-standards/standards/ecma-404/)
+
 ### Measurement
 
 During experiment was compared value based and pointer based JsonStruct implementations.
@@ -90,3 +92,6 @@ For performance please handle maps and slices.
 
 * Parse json to struct
 * ToJson from test to suite
+* Make diff
+* Evaluate circular dependencies and return error
+* MsgPack

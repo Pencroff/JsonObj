@@ -1,4 +1,4 @@
-package benchmark
+package comparison
 
 import (
 	"fmt"
@@ -113,7 +113,7 @@ func BenchmarkPrimitiveOps_Read(b *testing.B) {
 	pjs := ejs.JsonStructPtr{}
 	tblObj := []struct {
 		name string
-		o    djs.JsonStructOps
+		o    djs.JStructOps
 	}{
 		{"Val", &vjs},
 		{"Ptr", &pjs},
@@ -203,7 +203,7 @@ func BenchmarkPrimitiveOps_Check(b *testing.B) {
 	pjs := ejs.JsonStructPtr{}
 	tblObj := []struct {
 		name string
-		o    djs.JsonStructOps
+		o    djs.JStructOps
 	}{
 		{"Val", &vjs},
 		{"Ptr", &pjs},

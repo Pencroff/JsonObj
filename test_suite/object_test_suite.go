@@ -9,11 +9,11 @@ import (
 
 type ObjectOpsTestSuite struct {
 	suite.Suite
-	factory func() djs.JsonStructOps
-	js      djs.JsonStructOps
+	factory func() djs.JStructOps
+	js      djs.JStructOps
 }
 
-func (s *ObjectOpsTestSuite) SetFactory(fn func() djs.JsonStructOps) {
+func (s *ObjectOpsTestSuite) SetFactory(fn func() djs.JStructOps) {
 	s.factory = fn
 }
 

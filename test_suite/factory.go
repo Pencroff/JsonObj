@@ -5,14 +5,18 @@ import (
 	"github.com/Pencroff/JsonStruct/experiment"
 )
 
-func JsonStructValueFactory() djs.JsonStructOps {
+func JsonStructFactory() djs.JStructOps {
+	return &djs.JsonStruct{}
+}
+
+func JsonStructConvertibleFactory() djs.JStructConvertibleOps {
+	return &djs.JsonStruct{}
+}
+
+func JsonStructValueFactory() djs.JStructOps {
 	return &experiment.JsonStructValue{}
 }
 
-func JsonStructPointerFactory() djs.JsonStructOps {
+func JsonStructPointerFactory() djs.JStructOps {
 	return &experiment.JsonStructPtr{}
-}
-
-func JsonStructFactory() djs.JsonStructOps {
-	return &djs.JsonStruct{}
 }

@@ -1,4 +1,4 @@
-package benchmark
+package comparison
 
 import (
 	. "github.com/Pencroff/JsonStruct"
@@ -31,7 +31,7 @@ func (s *JsonStructA) Set(key string, value interface{}) (err error) {
 		jsonStruct = &JsonStruct{}
 	}
 
-	vInt, ok := value.(int)
+	vInt, ok := value.(int64)
 	if ok {
 		jsonStruct.SetInt(vInt)
 	} else {
@@ -94,7 +94,7 @@ func (s *JsonStructB) Set(key string, value interface{}) (err error) {
 		v = &data
 	case *JsonStruct:
 		v = data
-	case int:
+	case int64:
 		v.SetInt(data)
 	case float64:
 		v.SetFloat(data)

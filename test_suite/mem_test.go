@@ -14,11 +14,11 @@ func Test_MemTestSuite(t *testing.T) {
 	suite.Run(t, s)
 }
 
-func JsValueFn() djs.JsonStructOps {
+func JsValueFn() djs.JStructOps {
 	return &exp.JsonStructValue{}
 }
 
-func JsPtrFn() djs.JsonStructOps {
+func JsPtrFn() djs.JStructOps {
 	return &exp.JsonStructPtr{}
 }
 
@@ -31,102 +31,102 @@ var escape = func(v interface{}) {}
 type tbEl struct {
 	name   string
 	val    interface{}
-	callFn func(v tbEl) djs.JsonStructOps
-	jsFn   func() djs.JsonStructOps
+	callFn func(v tbEl) djs.JStructOps
+	jsFn   func() djs.JStructOps
 	size   uint64
 }
 
 var tm, _ = time.Parse(time.RFC3339, "2015-01-01T12:34:56Z")
 var tbl = []tbEl{
-	{"ValNull", nil, func(v tbEl) djs.JsonStructOps {
+	{"ValNull", nil, func(v tbEl) djs.JStructOps {
 		js := v.jsFn()
 		js.SetNull()
 		return js
 	}, JsValueFn, uint64(112)},
-	{"PtrNull", nil, func(v tbEl) djs.JsonStructOps {
+	{"PtrNull", nil, func(v tbEl) djs.JStructOps {
 		js := v.jsFn()
 		js.SetNull()
 		return js
 	}, JsPtrFn, uint64(16)},
 	// ------------------------------------------------------------
-	{"ValBool", true, func(v tbEl) djs.JsonStructOps {
+	{"ValBool", true, func(v tbEl) djs.JStructOps {
 		js := v.jsFn()
 		js.SetBool(v.val.(bool))
 		return js
 	}, JsValueFn, uint64(112)},
-	{"PtrBool", true, func(v tbEl) djs.JsonStructOps {
+	{"PtrBool", true, func(v tbEl) djs.JStructOps {
 		js := v.jsFn()
 		js.SetBool(v.val.(bool))
 		return js
 	}, JsPtrFn, uint64(16)},
 	// ------------------------------------------------------------
-	{"ValInt ", int64(10), func(v tbEl) djs.JsonStructOps {
+	{"ValInt ", int64(10), func(v tbEl) djs.JStructOps {
 		js := v.jsFn()
 		js.SetInt(v.val.(int64))
 		return js
 	}, JsValueFn, uint64(112)},
-	{"PtrInt ", int64(10), func(v tbEl) djs.JsonStructOps {
+	{"PtrInt ", int64(10), func(v tbEl) djs.JStructOps {
 		js := v.jsFn()
 		js.SetInt(v.val.(int64))
 		return js
 	}, JsPtrFn, uint64(24)},
 	// ------------------------------------------------------------
-	{"ValUint", uint64(10), func(v tbEl) djs.JsonStructOps {
+	{"ValUint", uint64(10), func(v tbEl) djs.JStructOps {
 		js := v.jsFn()
 		js.SetUint(v.val.(uint64))
 		return js
 	}, JsValueFn, uint64(112)},
-	{"PtrUint", uint64(10), func(v tbEl) djs.JsonStructOps {
+	{"PtrUint", uint64(10), func(v tbEl) djs.JStructOps {
 		js := v.jsFn()
 		js.SetUint(v.val.(uint64))
 		return js
 	}, JsPtrFn, uint64(24)},
 	// ------------------------------------------------------------
-	{"ValFloat", 3.14159, func(v tbEl) djs.JsonStructOps {
+	{"ValFloat", 3.14159, func(v tbEl) djs.JStructOps {
 		js := v.jsFn()
 		js.SetFloat(v.val.(float64))
 		return js
 	}, JsValueFn, uint64(112)},
-	{"PtrFloat", 3.14159, func(v tbEl) djs.JsonStructOps {
+	{"PtrFloat", 3.14159, func(v tbEl) djs.JStructOps {
 		js := v.jsFn()
 		js.SetFloat(v.val.(float64))
 		return js
 	}, JsPtrFn, uint64(24)},
 	// ------------------------------------------------------------
-	{"ValString", "Abc...xyz", func(v tbEl) djs.JsonStructOps {
+	{"ValString", "Abc...xyz", func(v tbEl) djs.JStructOps {
 		js := v.jsFn()
 		js.SetString(v.val.(string))
 		return js
 	}, JsValueFn, uint64(112)},
-	{"PtrString", "Abc...xyz", func(v tbEl) djs.JsonStructOps {
+	{"PtrString", "Abc...xyz", func(v tbEl) djs.JStructOps {
 		js := v.jsFn()
 		js.SetString(v.val.(string))
 		return js
 	}, JsPtrFn, uint64(32)},
 	// ------------------------------------------------------------
-	{"ValTime", tm, func(v tbEl) djs.JsonStructOps {
+	{"ValTime", tm, func(v tbEl) djs.JStructOps {
 		js := v.jsFn()
 		js.SetTime(v.val.(time.Time))
 		return js
 	}, JsValueFn, uint64(112)},
-	{"PtrTime", tm, func(v tbEl) djs.JsonStructOps {
+	{"PtrTime", tm, func(v tbEl) djs.JStructOps {
 		js := v.jsFn()
 		js.SetTime(v.val.(time.Time))
 		return js
 	}, JsPtrFn, uint64(40)},
 }
 var tlbObjArr = []tbEl{
-	{"ValObjEmpty", nil, func(v tbEl) djs.JsonStructOps {
+	{"ValObjEmpty", nil, func(v tbEl) djs.JStructOps {
 		js := v.jsFn()
 		js.AsObject()
 		return js
 	}, JsValueFn, uint64(160)},
-	{"PtrObjEmpty", nil, func(v tbEl) djs.JsonStructOps {
+	{"PtrObjEmpty", nil, func(v tbEl) djs.JStructOps {
 		js := v.jsFn()
 		js.AsObject()
 		return js
 	}, JsPtrFn, uint64(72)},
-	{"ValObj", nil, func(v tbEl) djs.JsonStructOps {
+	{"ValObj", nil, func(v tbEl) djs.JStructOps {
 		js := v.jsFn()
 		js.AsObject()
 		for idx, el := range tbl {
@@ -136,7 +136,7 @@ var tlbObjArr = []tbEl{
 		}
 		return js
 	}, JsValueFn, uint64(1232)},
-	{"PtrObj", nil, func(v tbEl) djs.JsonStructOps {
+	{"PtrObj", nil, func(v tbEl) djs.JStructOps {
 		js := v.jsFn()
 		js.AsObject()
 		for idx, el := range tbl {
@@ -147,17 +147,17 @@ var tlbObjArr = []tbEl{
 		}
 		return js
 	}, JsPtrFn, uint64(536)},
-	{"ValArrEmpty", nil, func(v tbEl) djs.JsonStructOps {
+	{"ValArrEmpty", nil, func(v tbEl) djs.JStructOps {
 		js := v.jsFn()
 		js.AsArray()
 		return js
 	}, JsValueFn, uint64(112)},
-	{"PtrArrEmpty", nil, func(v tbEl) djs.JsonStructOps {
+	{"PtrArrEmpty", nil, func(v tbEl) djs.JStructOps {
 		js := v.jsFn()
 		js.AsArray()
 		return js
 	}, JsPtrFn, uint64(40)},
-	{"ValArr", nil, func(v tbEl) djs.JsonStructOps {
+	{"ValArr", nil, func(v tbEl) djs.JStructOps {
 		js := v.jsFn()
 		js.AsArray()
 		for idx, el := range tbl {
@@ -167,7 +167,7 @@ var tlbObjArr = []tbEl{
 		}
 		return js
 	}, JsValueFn, uint64(1136)},
-	{"PtrArr", nil, func(v tbEl) djs.JsonStructOps {
+	{"PtrArr", nil, func(v tbEl) djs.JStructOps {
 		js := v.jsFn()
 		js.AsArray()
 		for idx, el := range tbl {

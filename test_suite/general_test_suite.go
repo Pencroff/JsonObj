@@ -9,11 +9,11 @@ import (
 
 type GeneralOpsTestSuite struct {
 	suite.Suite
-	factory func() djs.JsonStructOps
-	js      djs.JsonStructOps
+	factory func() djs.JStructOps
+	js      djs.JStructOps
 }
 
-func (s *GeneralOpsTestSuite) SetFactory(fn func() djs.JsonStructOps) {
+func (s *GeneralOpsTestSuite) SetFactory(fn func() djs.JStructOps) {
 	s.factory = fn
 }
 
@@ -52,8 +52,8 @@ func (s *GeneralOpsTestSuite) TestTypeValue() {
 }
 
 func (s *GeneralOpsTestSuite) TestAsTypeValue() {
-	obj := make(map[string]djs.JsonStructOps)
-	arr := make([]djs.JsonStructOps, 0)
+	obj := make(map[string]djs.JStructOps)
+	arr := make([]djs.JStructOps, 0)
 	tbl := []struct {
 		valueType djs.Type
 		value     interface{}
@@ -83,8 +83,8 @@ func (s *GeneralOpsTestSuite) TestSetKeyNullObjArr() {
 	arr.AsArray()
 	tbl := []struct {
 		key      string
-		value    djs.JsonStructOps
-		resValue djs.JsonStructOps
+		value    djs.JStructOps
+		resValue djs.JStructOps
 		isMethod string
 		keyType  djs.Type
 		str      string
@@ -161,6 +161,6 @@ func (s *GeneralOpsTestSuite) TestSizeArrayObj() {
 		{arr, 4},
 	}
 	for _, el := range tbl {
-		s.Equal(el.size, el.value.(djs.JsonStructOps).Size(), "len(%v) => %v", el.value, el.size)
+		s.Equal(el.size, el.value.(djs.JStructOps).Size(), "len(%v) => %v", el.value, el.size)
 	}
 }

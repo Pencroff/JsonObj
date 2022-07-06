@@ -24,25 +24,17 @@ type JsonStruct struct {
 	ptr unsafe.Pointer
 }
 
-//func (s *JsonStruct) ToJson() string {
-//	switch s.valType {
-//	case Integer:
-//		return strconv.Itoa(s.intNum)
-//	case Float:
-//		return strconv.FormatFloat(s.floatNum, 'f', -1, 64)
-//	case Bool:
-//		if s.intNum == 1 {
-//			return "true"
-//		} else {
-//			return "false"
-//		}
-//	case String:
-//		return `"` + s.str + `"`
-//	case Time:
-//		return `"` + s.dt.Format(time.RFC3339) + `"`
-//	}
-//	return "null"
-//}
+//region Json Unmarshal / Marshal
+
+func (s *JsonStruct) UnmarshalJSON(bytes []byte) error {
+	return UnmarshalJSON(bytes, s)
+}
+
+func (s *JsonStruct) MarshalJSON() ([]byte, error) {
+	return MarshalJSON(s)
+}
+
+//endregion
 
 func (s *JsonStruct) Type() Type {
 	return s.valType
@@ -67,9 +59,9 @@ func (s *JsonStruct) Value() interface{} {
 	case Time:
 		return *(*time.Time)(s.ptr)
 	case Object:
-		return *(*map[string]JsonStructOps)(s.ptr)
+		return *(*map[string]JStructOps)(s.ptr)
 	case Array:
-		return *(*[]JsonStructOps)(s.ptr)
+		return *(*[]JStructOps)(s.ptr)
 	}
 }
 
@@ -81,10 +73,10 @@ func (s *JsonStruct) Size() int {
 		v := *(*string)(s.ptr)
 		return len(v)
 	case Object:
-		v := *(*map[string]JsonStructOps)(s.ptr)
+		v := *(*map[string]JStructOps)(s.ptr)
 		return len(v)
 	case Array:
-		v := *(*[]JsonStructOps)(s.ptr)
+		v := *(*[]JStructOps)(s.ptr)
 		return len(v)
 	}
 }
@@ -303,7 +295,7 @@ func (s *JsonStruct) SetKey(key string, v interface{}) error {
 	if s.valType != Object {
 		return NotObjectError
 	}
-	m := *(*map[string]JsonStructOps)(s.ptr)
+	m := *(*map[string]JStructOps)(s.ptr)
 	pjs, err := s.populatePjs(v, m[key])
 	if err != nil {
 		return err
@@ -312,16 +304,16 @@ func (s *JsonStruct) SetKey(key string, v interface{}) error {
 	return nil
 }
 
-func (s *JsonStruct) GetKey(key string) JsonStructOps {
+func (s *JsonStruct) GetKey(key string) JStructOps {
 	if s.valType != Object {
 		return nil
 	}
-	m := *(*map[string]JsonStructOps)(s.ptr)
+	m := *(*map[string]JStructOps)(s.ptr)
 	return m[key]
 }
 
-func (s *JsonStruct) RemoveKey(key string) JsonStructOps {
-	m := *(*map[string]JsonStructOps)(s.ptr)
+func (s *JsonStruct) RemoveKey(key string) JStructOps {
+	m := *(*map[string]JStructOps)(s.ptr)
 	v, _ := m[key]
 	delete(m, key)
 	return v
@@ -331,7 +323,7 @@ func (s *JsonStruct) HasKey(key string) bool {
 	if s.valType != Object {
 		return false
 	}
-	m := *(*map[string]JsonStructOps)(s.ptr)
+	m := *(*map[string]JStructOps)(s.ptr)
 	_, ok := m[key]
 	return ok
 }
@@ -340,7 +332,7 @@ func (s *JsonStruct) Keys() []string {
 	if s.valType != Object {
 		return []string{}
 	}
-	m := *(*map[string]JsonStructOps)(s.ptr)
+	m := *(*map[string]JStructOps)(s.ptr)
 	keys := make([]string, len(m))
 	var idx uint64
 	for k := range m {
@@ -359,7 +351,7 @@ func (s *JsonStruct) AsObject() {
 		return
 	}
 	s.valType = Object
-	s.ptr = unsafe.Pointer(&map[string]JsonStructOps{})
+	s.ptr = unsafe.Pointer(&map[string]JStructOps{})
 }
 
 //endregion Object operations
@@ -372,7 +364,7 @@ func (s *JsonStruct) Push(v interface{}) error {
 	if s.valType != Array {
 		return NotArrayError
 	}
-	m := *(*[]JsonStructOps)(s.ptr)
+	m := *(*[]JStructOps)(s.ptr)
 	el, err := s.populatePjs(v, nil)
 	if err != nil {
 		return err
@@ -382,11 +374,11 @@ func (s *JsonStruct) Push(v interface{}) error {
 	return nil
 }
 
-func (s *JsonStruct) Pop() JsonStructOps {
+func (s *JsonStruct) Pop() JStructOps {
 	if s.valType != Array {
 		return nil
 	}
-	m := *(*[]JsonStructOps)(s.ptr)
+	m := *(*[]JStructOps)(s.ptr)
 	lIdx := len(m) - 1
 	if lIdx == -1 {
 		return nil
@@ -398,11 +390,11 @@ func (s *JsonStruct) Pop() JsonStructOps {
 	return v
 }
 
-func (s *JsonStruct) Shift() JsonStructOps {
+func (s *JsonStruct) Shift() JStructOps {
 	if s.valType != Array {
 		return nil
 	}
-	m := *(*[]JsonStructOps)(s.ptr)
+	m := *(*[]JStructOps)(s.ptr)
 	l := len(m)
 	if l == 0 {
 		return nil
@@ -425,21 +417,21 @@ func (s *JsonStruct) SetIndex(i int, v interface{}) error {
 	if err != nil {
 		return err
 	}
-	m := *(*[]JsonStructOps)(s.ptr)
+	m := *(*[]JStructOps)(s.ptr)
 	l := len(m)
 	if i >= l {
-		m = append(m, make([]JsonStructOps, i-l+1)...)
+		m = append(m, make([]JStructOps, i-l+1)...)
 		s.ptr = unsafe.Pointer(&m)
 	}
 	m[i] = el
 	return nil
 }
 
-func (s *JsonStruct) GetIndex(i int) JsonStructOps {
+func (s *JsonStruct) GetIndex(i int) JStructOps {
 	if s.valType != Array {
 		return nil
 	}
-	m := *(*[]JsonStructOps)(s.ptr)
+	m := *(*[]JStructOps)(s.ptr)
 	l := len(m)
 	if i >= l {
 		return nil
@@ -463,9 +455,9 @@ func (s *JsonStruct) AsArray() {
 
 // region Helper functions
 
-func (s *JsonStruct) populatePjs(v interface{}, pjs JsonStructOps) (JsonStructOps, error) {
+func (s *JsonStruct) populatePjs(v interface{}, pjs JStructOps) (JStructOps, error) {
 	switch data := v.(type) {
-	case JsonStructOps:
+	case JStructOps:
 		pjs = data
 	case nil:
 		pjs = resolvePointer(pjs)
@@ -518,7 +510,7 @@ func (s *JsonStruct) populatePjs(v interface{}, pjs JsonStructOps) (JsonStructOp
 	return pjs, nil
 }
 
-func resolvePointer(v JsonStructOps) JsonStructOps {
+func resolvePointer(v JStructOps) JStructOps {
 	if v == nil {
 		return &JsonStruct{}
 	}

@@ -17,8 +17,8 @@ type JsonStructValue struct {
 	str  string
 	tm   time.Time
 	// ref
-	props map[string]djs.JsonStructOps
-	elms  []djs.JsonStructOps
+	props map[string]djs.JStructOps
+	elms  []djs.JStructOps
 }
 
 func (s *JsonStructValue) Type() djs.Type {
@@ -67,7 +67,7 @@ func (s *JsonStructValue) AsObject() {
 		return
 	}
 	s.valType = djs.Object
-	s.props = make(map[string]djs.JsonStructOps)
+	s.props = make(map[string]djs.JStructOps)
 }
 
 func (s *JsonStructValue) IsArray() bool {
@@ -79,7 +79,7 @@ func (s *JsonStructValue) AsArray() {
 		return
 	}
 	s.valType = djs.Array
-	s.elms = make([]djs.JsonStructOps, 0)
+	s.elms = make([]djs.JStructOps, 0)
 }
 
 func (s *JsonStructValue) Size() int {
@@ -284,14 +284,14 @@ func (s *JsonStructValue) SetKey(key string, v interface{}) error {
 	return nil
 }
 
-func (s *JsonStructValue) GetKey(key string) djs.JsonStructOps {
+func (s *JsonStructValue) GetKey(key string) djs.JStructOps {
 	if s.valType != djs.Object {
 		return nil
 	}
 	return s.props[key]
 }
 
-func (s *JsonStructValue) RemoveKey(key string) djs.JsonStructOps {
+func (s *JsonStructValue) RemoveKey(key string) djs.JStructOps {
 	m := s.props
 	v, _ := m[key]
 	delete(m, key)
@@ -333,7 +333,7 @@ func (s *JsonStructValue) Push(v interface{}) error {
 	return nil
 }
 
-func (s *JsonStructValue) Pop() djs.JsonStructOps {
+func (s *JsonStructValue) Pop() djs.JStructOps {
 	if s.valType != djs.Array {
 		return nil
 	}
@@ -348,7 +348,7 @@ func (s *JsonStructValue) Pop() djs.JsonStructOps {
 	return v
 }
 
-func (s *JsonStructValue) Shift() djs.JsonStructOps {
+func (s *JsonStructValue) Shift() djs.JStructOps {
 	if s.valType != djs.Array {
 		return nil
 	}
@@ -377,14 +377,14 @@ func (s *JsonStructValue) SetIndex(i int, v interface{}) error {
 	m := s.elms
 	l := len(m)
 	if i >= l {
-		m = append(m, make([]djs.JsonStructOps, i-l+1)...)
+		m = append(m, make([]djs.JStructOps, i-l+1)...)
 		s.elms = m
 	}
 	m[i] = el
 	return nil
 }
 
-func (s *JsonStructValue) GetIndex(i int) djs.JsonStructOps {
+func (s *JsonStructValue) GetIndex(i int) djs.JStructOps {
 	if s.valType != djs.Array {
 		return nil
 	}
@@ -396,9 +396,9 @@ func (s *JsonStructValue) GetIndex(i int) djs.JsonStructOps {
 	return m[i]
 }
 
-func (s *JsonStructValue) populateVjs(v interface{}, vjs djs.JsonStructOps) (djs.JsonStructOps, error) {
+func (s *JsonStructValue) populateVjs(v interface{}, vjs djs.JStructOps) (djs.JStructOps, error) {
 	switch data := v.(type) {
-	case djs.JsonStructOps:
+	case djs.JStructOps:
 		vjs = data
 	case nil:
 		vjs = resolveValue(vjs)
@@ -451,7 +451,7 @@ func (s *JsonStructValue) populateVjs(v interface{}, vjs djs.JsonStructOps) (djs
 	return vjs, nil
 }
 
-func resolveValue(v djs.JsonStructOps) djs.JsonStructOps {
+func resolveValue(v djs.JStructOps) djs.JStructOps {
 	if v == nil {
 		return &JsonStructPtr{}
 	}

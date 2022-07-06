@@ -8,11 +8,11 @@ import (
 
 type ArrayOpsTestSuite struct {
 	suite.Suite
-	factory func() djs.JsonStructOps
-	js      djs.JsonStructOps
+	factory func() djs.JStructOps
+	js      djs.JStructOps
 }
 
-func (s *ArrayOpsTestSuite) SetFactory(fn func() djs.JsonStructOps) {
+func (s *ArrayOpsTestSuite) SetFactory(fn func() djs.JStructOps) {
 	s.factory = fn
 }
 

@@ -1,4 +1,4 @@
-package benchmark
+package comparison
 
 import (
 	"fmt"
@@ -26,11 +26,11 @@ func BenchmarkObjArrayOps(b *testing.B) {
 	PrintSize(&eStruct)
 	tblObj := []struct {
 		name    string
-		o       djs.JsonStructOps
-		factory func() djs.JsonStructOps
+		o       djs.JStructOps
+		factory func() djs.JStructOps
 	}{
-		{"Val", &vjs, func() djs.JsonStructOps { return &ejs.JsonStructValue{} }},
-		{"Ptr", &pjs, func() djs.JsonStructOps { return &ejs.JsonStructPtr{} }},
+		{"Val", &vjs, func() djs.JStructOps { return &ejs.JsonStructValue{} }},
+		{"Ptr", &pjs, func() djs.JStructOps { return &ejs.JsonStructPtr{} }},
 	}
 	tblMethod := []struct {
 		keyType string
@@ -70,7 +70,7 @@ func BenchmarkObjArrayOps(b *testing.B) {
 			t.o = t.factory()
 			t.o.AsObject()
 			b.Run(nameFn("GetKey"), func(b *testing.B) {
-				var v djs.JsonStructOps
+				var v djs.JStructOps
 				for i := 0; i < b.N; i++ {
 					key := m.keyType + strconv.Itoa(i)
 					v = t.o.GetKey(key)
@@ -153,7 +153,7 @@ func BenchmarkObjArrayOps(b *testing.B) {
 				}
 			}
 			b.Run(nameFn("Pop"), func(b *testing.B) {
-				var v djs.JsonStructOps
+				var v djs.JStructOps
 				for i := 0; i < b.N; i++ {
 					v = t.o.Pop()
 				}
