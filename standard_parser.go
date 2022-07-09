@@ -3,7 +3,6 @@ package JsonStruct
 import (
 	"bufio"
 	"bytes"
-	"github.com/Pencroff/JsonStruct/parsing"
 	"io"
 )
 
@@ -21,15 +20,17 @@ var (
 	// JStructParse Func provides io.Reader based parsing of JSON data
 	JStructParse = JStructParseReader
 	// JStructSerialize Func provides io.Writer based serialization of JSON data
-	JStructSerialize        = JStructSerializeWriter
-	JStructReaderBufferSize = 1024
+	JStructSerialize = JStructSerializeWriter
+	// Buffers
+	JStructReaderBufferSize  = 1024
+	JStructScannerBufferSize = 1024
 )
 
 // Initial implementation of the JSON parser supported Standard ECMA-404 JSON format.
 // https://www.ecma-international.org/publications-and-standards/standards/ecma-404/
 
 func JStructParseByte(b []byte, v JStructOps) error {
-	rd := bytes.NewReader(b)
+	var rd = bytes.NewReader(b)
 	return JStructParse(rd, v)
 }
 
@@ -45,34 +46,26 @@ const (
 	ArrElement
 )
 
-func JStructParseReader(r io.Reader, v JStructOps) (e error) {
-	rd := bufio.NewReaderSize(r, JStructReaderBufferSize)
-	finishLoop := false
-	buf := make([]byte, 1)
+func JStructParseReader(rd io.Reader, v JStructOps) (e error) {
+	rdBuf := bufio.NewReaderSize(rd, JStructReaderBufferSize)
 	var bt byte
 	for {
-		n, err := rd.Read(buf)
-		if err != nil {
-			if err == io.EOF {
-				finishLoop = true
-			} else {
-				return err
+		bt, e = rdBuf.ReadByte()
+		if e != nil {
+			if e == io.EOF {
+				e = nil
+				break
 			}
 		}
-		if n == 0 {
-			continue
-		}
-		bt = buf[0]
 		switch bt {
-		//case '{':
-		//	state = Obj
-		//case '[':
-		//	state = Arr
+		case '{':
+			//rdBuf.UnreadByte()
+			//e = parsing.ParseObj(rdBuf, v)
+		case '[':
+			//rdBuf.UnreadByte()
+			//e = parsing.ParseArr(rdBuf, v)
 		default:
-			parsing.ParsePrimitiveValue(rd, v)
-		}
-		if finishLoop {
-			break
+			ParsePrimitiveValue(bt, rdBuf, v)
 		}
 	}
 	return

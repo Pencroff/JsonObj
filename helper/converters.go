@@ -2,7 +2,7 @@ package helper
 
 const (
 	// MaxUint is the maximum value of uint
-	MaxUint    = ^uint64(0)
+	MaxUint    = ^uint64(0) //= 18446744073709551615
 	MaxIntUint = MaxUint >> 1
 	MinIntUint = MaxIntUint + 1
 	// MaxInt is the maximum value of int

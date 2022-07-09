@@ -14,8 +14,8 @@ const (
 	Int
 	Uint
 	Float
-	Time
 	String
+	Time
 	Object
 	Array
 )

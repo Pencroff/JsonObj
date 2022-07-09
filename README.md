@@ -6,11 +6,26 @@ Json / JS dynamic structure. Play with Go.
 
 [Standard](https://www.ecma-international.org/publications-and-standards/standards/ecma-404/)
 
-### Measurement
+### Parsing
 
-During experiment was compared value based and pointer based JsonStruct implementations.
+* [My Golang JSON Evaluation](https://medium.com/geekculture/my-golang-json-evaluation-20a9ca6ef79c)
+  * [Benchmarks](https://github.com/slaise/GoJsonBenchmark)
 
-#### Data access speed
+#### Byte array core
+
+* https://github.com/buger/jsonparser
+* https://github.com/tidwall/gjson
+
+#### Marshallers
+
+* https://github.com/mailru/easyjson
+* https://github.com/pkg/json - abstractions for json
+* https://github.com/francoispqt/gojay
+* https://github.com/goccy/go-json
+* "-------------------------------"
+* https://github.com/minio/simdjson-go
+
+### Data access speed
 
 * Primitive values
   * Bool implemented in same way on both sides so no difference in speed - 0.5 - 0.6 ns (instantly)
@@ -52,7 +67,7 @@ During experiment was compared value based and pointer based JsonStruct implemen
     * Push: 38 - 51 ns
     * Pop: 2.3 ns (single measurement)
 
-#### Memory
+### Memory
 
 * Primitive values:
   * Value implementation: 112 bytes
@@ -72,7 +87,7 @@ During experiment was compared value based and pointer based JsonStruct implemen
 
     From 1.8 to 2.8 times larger value then pointer implementation.
 
-#### Summary
+### Summary
 
 The value implementation is faster than pointer implementation.
 The difference is due to the fact that value implementation is less memory efficient.
@@ -80,7 +95,7 @@ Value implementation should expect to consume approximately 2 time more memory t
 The performance of pointer implementation significantly slow in array implementation the rest operations in same range or similar to value implementation.
 For performance please handle maps and slices.
 
-### How to increase version
+## How to increase version
 
 * commit all required changes
 * git tag <version - v0.0.2>

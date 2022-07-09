@@ -1,12 +1,11 @@
-package parsing
+package JsonStruct
 
 import (
 	"bufio"
-	"github.com/Pencroff/JsonStruct"
 )
 
-func ParsePrimitiveValue(rd *bufio.Reader, v JsonStruct.JStructOps) (e error) {
-	bt, e := rd.ReadByte()
+func ParsePrimitiveValue(bt byte, rd *bufio.Reader, v JStructOps) (e error) {
+
 	switch bt {
 	case 'n':
 		v.SetNull()
