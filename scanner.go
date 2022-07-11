@@ -5,7 +5,7 @@ import "bufio"
 type ScannerKind byte
 
 const (
-	ScanNone ScannerKind = iota
+	ScanUnknown ScannerKind = iota
 	ScanNull
 	ScanFalse
 	ScanTrue
@@ -22,8 +22,6 @@ const (
 
 func (k *ScannerKind) String() string {
 	switch *k {
-	case ScanNone:
-		return "ScanNone"
 	case ScanNull:
 		return "ScanNull"
 	case ScanFalse:
@@ -73,7 +71,7 @@ type JStructScannerImpl struct {
 }
 
 func (j *JStructScannerImpl) Next() error {
-	j.scType = ScanNone
+	j.scType = ScanUnknown
 	j.buf = j.buf[:0]
 	for {
 		b, err := j.rd.ReadByte()

@@ -20,10 +20,11 @@ Json / JS dynamic structure. Play with Go.
 
 * https://github.com/mailru/easyjson
 * https://github.com/pkg/json - abstractions for json
-* https://github.com/francoispqt/gojay
-* https://github.com/goccy/go-json
+* https://github.com/francoispqt/gojay - requires extra code around model
+* https://github.com/goccy/go-json - large payload winner
 * "-------------------------------"
 * https://github.com/minio/simdjson-go
+* https://github.com/bet365/jingo - encoder
 
 ### Data access speed
 
