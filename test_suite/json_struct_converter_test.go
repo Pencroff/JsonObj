@@ -5,11 +5,6 @@ import (
 	"testing"
 )
 
-func TestJStruct_Scanner(t *testing.T) {
-	s := new(ScannerTestSuite)
-	suite.Run(t, s)
-}
-
 func TestJsonStructConverter_ParserSuite(t *testing.T) {
 	s := new(ParserTestSuite)
 	s.SetFactory(JsonStructFactory)
