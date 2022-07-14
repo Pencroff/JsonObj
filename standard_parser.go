@@ -21,9 +21,6 @@ var (
 	JStructParse = JStructParseReader
 	// JStructSerialize Func provides io.Writer based serialization of JSON data
 	JStructSerialize = JStructSerializeWriter
-	// Buffers
-	JStructReaderBufferSize  = 1024
-	JStructScannerBufferSize = 1024
 )
 
 // Initial implementation of the JSON parser supported Standard ECMA-404 JSON format.

@@ -31,10 +31,9 @@ func (s *TokenizerTestSuite) SetupTest() {
 
 func (s *TokenizerTestSuite) TestNewTokenizerInstance() {
 	rd := &bufio.Reader{}
-	sc := djs.NewJStructScanner(rd)
+	sc := djs.NewJStructReader(rd)
 	tk := djs.NewJSStructTokenizer(sc)
-	s.Equal(cap(tk.Value()), djs.JStructScannerBufferSize)
-	sc = djs.NewJStructScannerWithSize(rd, 100)
+	sc = djs.NewJStructReaderWithSize(rd, 100)
 	s.Equal(cap(tk.Value()), 100)
 }
 
@@ -241,7 +240,7 @@ func RunTokeniserTest(el TokenizerTestElement, s *TokenizerTestSuite) {
 	s.T().Run(el.idx, func(t *testing.T) {
 		b := bytes.NewBuffer(el.in)
 		bf := bufio.NewReader(b)
-		sc := djs.NewJStructScanner(bf)
+		sc := djs.NewJStructReader(bf)
 		tk := djs.NewJSStructTokenizer(sc)
 		e := tk.Next()
 		v := tk.Value()

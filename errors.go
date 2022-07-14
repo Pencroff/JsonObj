@@ -19,4 +19,4 @@ func (i *InvalidJsonPtrError) Error() string {
 	return "JsonStruct: invalid json format at position " + strconv.FormatUint(i.Pos, 10)
 }
 
-var OffsetOutOfRangeError = errors.New("JStructScanner: offset out of range")
+var OffsetOutOfRangeError = errors.New("JStructReader: offset out of range")

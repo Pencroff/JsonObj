@@ -55,12 +55,12 @@ type JStructTokenizer interface {
 	Kind() TokenizerKind
 }
 
-func NewJSStructTokenizer(sc JStructScanner) JStructTokenizer {
+func NewJSStructTokenizer(sc JStructReader) JStructTokenizer {
 	return &JStructTokenizerImpl{sc: sc}
 }
 
 type JStructTokenizerImpl struct {
-	sc     JStructScanner
+	sc     JStructReader
 	scType TokenizerKind
 }
 
@@ -169,7 +169,7 @@ func (t *JStructTokenizerImpl) ReadString() error {
 }
 
 func (t *JStructTokenizerImpl) Value() []byte {
-	return t.sc.Peek()
+	return t.sc.Release()
 }
 
 func (t *JStructTokenizerImpl) Kind() TokenizerKind {
