@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	djs "github.com/Pencroff/JsonStruct"
+	h "github.com/Pencroff/JsonStruct/helper"
 	"github.com/stretchr/testify/suite"
 	"io"
 	"testing"
@@ -61,7 +62,7 @@ func (s *ReaderTestSuite) TestScanner_Offset() {
 	}
 	for _, tc := range testCases {
 		e := s.rd.Offset(tc.offset)
-		fmt.Printf("%d: %s\n", tc.offset, string(s.rd.Buffer()))
+		//fmt.Printf("%d: %s\n", tc.offset, string(s.rd.Buffer()))
 		s.Equal(tc.data, s.rd.Release())
 		s.Equal(tc.idx, s.rd.Index())
 		s.Equal(tc.total, s.rd.Total())
@@ -81,4 +82,37 @@ func (s *ReaderTestSuite) TestScanner_EOF() {
 	e = s.rd.Next()
 	s.ErrorIs(e, io.EOF)
 	s.Equal(byte('z'), s.rd.Current())
+}
+
+func Benchmark_Reader_canada(b *testing.B) {
+	data, _ := h.ReadData("../benchmark/data/canada.json.gz")
+	fmt.Printf("Data size: %.2f Mb\n", float64(len(data))/1024/1024)
+	var e error
+	cnt := 0
+	total := 0
+	b.Run("Reader___canada", func(b *testing.B) {
+		b.ReportAllocs()
+		b.SetBytes(int64(len(data)))
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			buf := bytes.NewBuffer(data)
+			rd := djs.NewJStructReader(buf)
+			for {
+				e = rd.Offset(8)
+				d := rd.Release()
+				cnt += len(d)
+				if e != nil {
+					total = rd.Total()
+					break
+				}
+			}
+		}
+		b.StopTimer()
+	})
+
+	fmt.Printf("Readed size: %.2f Mb\n", float64(total)/1024/1024)
+	if len(data) != total {
+		b.Fatal("Data size mismatch", total)
+	}
+	b.Log("Times", cnt/total)
 }

@@ -1,7 +1,6 @@
 package benchmark
 
 import (
-	"compress/gzip"
 	stdjson "encoding/json"
 	"fmt"
 	jsonvalue "github.com/Andrew-M-C/go.jsonvalue"
@@ -10,8 +9,6 @@ import (
 	gojson "github.com/goccy/go-json"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/minio/simdjson-go"
-	"io/ioutil"
-	"os"
 	"testing"
 )
 
@@ -205,21 +202,4 @@ func Benchmark_Unmarshal_canada(b *testing.B) {
 		}
 	})
 
-}
-
-func ReadData(path string) ([]byte, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	gz, err := gzip.NewReader(f)
-	if err != nil {
-		return nil, err
-	}
-	data, err := ioutil.ReadAll(gz)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
 }

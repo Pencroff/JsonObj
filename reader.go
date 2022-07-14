@@ -6,8 +6,8 @@ import (
 
 var (
 	// Buffers
-	JStructReaderBufferSize       = 4096
-	JSStructReaderBufferThreshold = JStructReaderBufferSize >> 2
+	JStructReaderBufferSize       = 4 * 1024
+	JSStructReaderBufferThreshold = JStructReaderBufferSize >> 3
 )
 
 type JStructReader interface {
