@@ -1,9 +1,7 @@
 package JsonStruct
 
 import (
-	"fmt"
 	"io"
-	"strings"
 )
 
 var (
@@ -48,21 +46,6 @@ type JStructReaderImpl struct {
 	idx      int // index of last read byte
 	total    int // total bytes read
 	finished bool
-}
-
-func (j *JStructReaderImpl) String() string {
-	bl := strings.Builder{}
-	bl.WriteString("JStructReader\n")
-	bl.WriteString(fmt.Sprintf("rd:%T\n", j.rd))
-	bl.WriteString(fmt.Sprintf("buf(%d):%s | %x\n", len(j.buf), string(j.buf), j.buf))
-	bl.WriteString(fmt.Sprintf("size:%d\t threshold:%d\n", j.size, JSStructReaderBufferThreshold))
-	bl.WriteString(fmt.Sprintf("start:%d\n", j.start))
-	bl.WriteString(fmt.Sprintf("ptr:%d\n", j.ptr))
-	bl.WriteString("-------\n")
-	bl.WriteString(fmt.Sprintf("idx:%d\t\t", j.idx))
-	bl.WriteString(fmt.Sprintf("total:%d\t\t", j.total))
-	bl.WriteString(fmt.Sprintf("finished:%v\n", j.finished))
-	return bl.String()
 }
 
 func (j *JStructReaderImpl) Buffer() []byte {
