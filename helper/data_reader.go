@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func ReadData(path string) ([]byte, error) {
+func ReadGzip(path string) ([]byte, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -17,6 +17,19 @@ func ReadData(path string) ([]byte, error) {
 		return nil, err
 	}
 	data, err := ioutil.ReadAll(gz)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+func ReadFile(path string) ([]byte, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	data, err := ioutil.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}

@@ -1,5 +1,7 @@
 package JsonStruct
 
+import "fmt"
+
 type TokenizerKind byte
 
 const (
@@ -17,6 +19,48 @@ const (
 	TokenValue
 	TokenValueLast
 )
+
+var whiteSpaces = [256]bool{
+	0x09: true, // tab
+	0x0A: true, // line feed
+	0x0D: true, // carriage return
+	0x20: true, // space
+}
+
+var numberInt = [256]bool{
+	'0': true,
+	'1': true,
+	'2': true,
+	'3': true,
+	'4': true,
+	'5': true,
+	'6': true,
+	'7': true,
+	'8': true,
+	'9': true,
+}
+
+var numberFloat = [256]bool{
+	'0': true,
+	'1': true,
+	'2': true,
+	'3': true,
+	'4': true,
+	'5': true,
+	'6': true,
+	'7': true,
+	'8': true,
+	'9': true,
+	'-': true,
+	'.': true,
+	'+': true,
+	'e': true,
+	'E': true,
+}
+
+var nullTokenData = []byte(`null`)
+var falseTokenData = []byte(`false`)
+var trueTokenData = []byte(`true`)
 
 func (k *TokenizerKind) String() string {
 	switch *k {
@@ -55,25 +99,53 @@ type JStructTokenizer interface {
 	Kind() TokenizerKind
 }
 
-func NewJSStructTokenizer(sc JStructReader) JStructTokenizer {
+func NewJSStructTokenizer(sc JStructScanner) JStructTokenizer {
 	return &JStructTokenizerImpl{sc: sc}
 }
 
 type JStructTokenizerImpl struct {
-	sc     JStructReader
+	sc     JStructScanner
 	scType TokenizerKind
+	v      []byte
 }
 
-func (t *JStructTokenizerImpl) Next() error {
-	t.scType = TokenUnknown
+func (t *JStructTokenizerImpl) nextSkipWhiteSpace() error {
 	for {
 		err := t.sc.Next()
 		if err != nil {
 			return err
 		}
+		b := t.sc.Current()
+		if whiteSpaces[b] {
+			t.sc.Bytes()
+			continue
+		}
+		return nil
+	}
+}
+
+func (t *JStructTokenizerImpl) nextKeepWhiteSpace() error {
+	for {
+		err := t.sc.Next()
+		if err != nil {
+			return err
+		}
+		b := t.sc.Current()
+		if whiteSpaces[b] {
+			continue
+		}
+		return nil
+	}
+}
+
+func (t *JStructTokenizerImpl) Next() error {
+	t.scType = TokenUnknown
+	for {
+		err := t.nextSkipWhiteSpace()
+		if err != nil {
+			return InvalidJsonError{Err: err}
+		}
 		switch t.sc.Current() {
-		//case ' ', '\t', '\n', '\r':
-		//	continue
 		//case '{':
 		//	t.scType = TokenObject
 		//	return nil
@@ -81,24 +153,13 @@ func (t *JStructTokenizerImpl) Next() error {
 		//	t.scType = TokenArray
 		//	return nil
 		case 'n':
-			t.scType = TokenNull
-			//return t.ReadNBytes(3)
+			return t.ReadNull()
 		case 'f':
-			t.scType = TokenFalse
-			//return t.ReadNBytes(4)
+			return t.ReadFalse()
 		case 't':
-			t.scType = TokenTrue
-			//return t.ReadNBytes(3)
-			return nil
-		case '-':
-			t.scType = TokenIntNumber
-			return nil
-		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-			t.scType = TokenIntNumber
-			return nil
-		case '.':
-			t.scType = TokenFloatNumber
-			return nil
+			return t.ReadTrue()
+		case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+			return t.ReadNumber()
 		case '"':
 			return t.ReadStringTime()
 		//case ':':
@@ -114,22 +175,57 @@ func (t *JStructTokenizerImpl) Next() error {
 		//	t.scType = TokenValueLast
 		//	return nil
 		default:
-			return InvalidJsonError
+			return InvalidJsonError{Err: err}
 		}
 	}
 	return nil
 }
 
-//func (t *JStructTokenizerImpl) ReadNBytes(n int) error {
-//	for i := 0; i < n; i++ {
-//		b, err := t.rd.ReadByte()
-//		if err != nil {
-//			return err
-//		}
-//		t.buf = append(t.buf, b)
-//	}
-//	return nil
-//}
+func (t *JStructTokenizerImpl) Value() []byte {
+	return t.v
+}
+
+func (t *JStructTokenizerImpl) Kind() TokenizerKind {
+	return t.scType
+}
+
+func (t *JStructTokenizerImpl) ReadNull() error {
+	return t.hardcodedToken(TokenNull, nullTokenData)
+}
+
+func (t *JStructTokenizerImpl) ReadFalse() error {
+	return t.hardcodedToken(TokenFalse, falseTokenData)
+}
+
+func (t *JStructTokenizerImpl) ReadTrue() error {
+	return t.hardcodedToken(TokenTrue, trueTokenData)
+}
+
+func (t *JStructTokenizerImpl) ReadNumber() error {
+	var e error
+	t.scType = TokenIntNumber
+	st := t.sc.Index()
+	fmt.Println("ReadNumber:", st, string(t.sc.Current()))
+	for {
+		e = t.sc.Next()
+		if e != nil {
+			break
+		}
+		b := t.sc.Current()
+		if !numberInt[b] {
+			break
+		}
+
+	}
+	end := t.sc.Index()
+	e = t.nextKeepWhiteSpace()
+	if end == t.sc.Index() || whiteSpaces[t.sc.Current()] {
+		l := end - st + 1
+		t.v = t.sc.Bytes()[:l]
+		return nil
+	}
+	return e
+}
 
 // Read json string or time in RFC3339 format
 func (t *JStructTokenizerImpl) ReadStringTime() error {
@@ -168,10 +264,27 @@ func (t *JStructTokenizerImpl) ReadString() error {
 	return nil
 }
 
-func (t *JStructTokenizerImpl) Value() []byte {
-	return t.sc.Release()
-}
+func (t *JStructTokenizerImpl) hardcodedToken(kind TokenizerKind, origin []byte) error {
+	t.scType = kind
+	l := len(origin)
+	idx := t.sc.Index()
+	for i, b := range origin[1:] {
+		e := t.sc.Next()
 
-func (t *JStructTokenizerImpl) Kind() TokenizerKind {
-	return t.scType
+		if b != t.sc.Current() || e != nil {
+			t.v = t.sc.Bytes()
+			t.scType = TokenUnknown
+			return InvalidJsonPtrError{Pos: idx + i + 1, Err: e}
+		}
+	}
+	idx = t.sc.Index()
+	// Check if it is a valid token ended by whitespaces
+	e := t.nextKeepWhiteSpace()
+	if idx == t.sc.Index() || whiteSpaces[t.sc.Current()] {
+		t.v = t.sc.Bytes()[:l]
+		return nil
+	}
+	t.scType = TokenUnknown
+	t.v = t.sc.Bytes()
+	return InvalidJsonPtrError{Pos: t.sc.Index(), Err: e}
 }

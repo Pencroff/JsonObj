@@ -1,11 +1,11 @@
 package test_suite
 
 import (
-	"bufio"
 	"bytes"
 	djs "github.com/Pencroff/JsonStruct"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
+	"io"
 	"testing"
 )
 
@@ -29,18 +29,10 @@ type TokenizerTestSuite struct {
 func (s *TokenizerTestSuite) SetupTest() {
 }
 
-func (s *TokenizerTestSuite) TestNewTokenizerInstance() {
-	rd := &bufio.Reader{}
-	sc := djs.NewJStructReader(rd)
-	tk := djs.NewJSStructTokenizer(sc)
-	sc = djs.NewJStructReaderWithSize(rd, 100)
-	s.Equal(cap(tk.Value()), 100)
-}
-
 func (s *TokenizerTestSuite) TestTokenizer_Next_null() {
 	tbl := []TokenizerTestElement{
 		{"null:0", []byte("null"), djs.TokenNull, []byte("null"), nil},
-		{"null:1", []byte("null "), djs.TokenNull, []byte("null"), nil},
+		{"null:1", []byte("null           "), djs.TokenNull, []byte("null"), nil},
 		{"null:2", []byte("null\n"), djs.TokenNull, []byte("null"), nil},
 		{"null:3", []byte("null\r"), djs.TokenNull, []byte("null"), nil},
 		{"null:4", []byte("null\t"), djs.TokenNull, []byte("null"), nil},
@@ -50,10 +42,13 @@ func (s *TokenizerTestSuite) TestTokenizer_Next_null() {
 		{"null:8", []byte(" null "), djs.TokenNull, []byte("null"), nil},
 		{"null:9", []byte(" null\n"), djs.TokenNull, []byte("null"), nil},
 		// Invalid cases
-		{"null:50", []byte(""), djs.TokenNull, []byte{}, djs.InvalidJsonError},
-		{"null:50", []byte("n"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"null:51", []byte("nill"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"null:52", []byte("nnn"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
+		{"null:50", []byte(""), djs.TokenUnknown, []byte(nil), djs.InvalidJsonError{Err: io.EOF}},
+		{"null:51", []byte("n"), djs.TokenUnknown, []byte("n"), djs.InvalidJsonPtrError{Pos: 1, Err: io.EOF}},
+		{"null:52", []byte("   nill"), djs.TokenUnknown, []byte("ni"), djs.InvalidJsonPtrError{Pos: 4}},
+		{"null:53", []byte("nnn"), djs.TokenUnknown, []byte("nn"), djs.InvalidJsonPtrError{Pos: 1}},
+		{"null:54", []byte("nnnn"), djs.TokenUnknown, []byte("nn"), djs.InvalidJsonPtrError{Pos: 1}},
+		{"null:55", []byte("nulle"), djs.TokenUnknown, []byte("nulle"), djs.InvalidJsonPtrError{Pos: 4}},
+		{"null:56", []byte("null\t\t\tnull"), djs.TokenUnknown, []byte("null\t\t\tn"), djs.InvalidJsonPtrError{Pos: 7}},
 	}
 	for _, el := range tbl {
 		RunTokeniserTest(el, s)
@@ -66,17 +61,19 @@ func (s *TokenizerTestSuite) TestTokenizer_Next_bool() {
 		{"bool:f00", []byte("false"), djs.TokenFalse, []byte("false"), nil},
 		{"bool:f01", []byte(" false "), djs.TokenFalse, []byte("false"), nil},
 		// Invalid cases
-		{"bool:f50", []byte(" folse "), djs.TokenFalse, []byte{}, djs.InvalidJsonError},
-		{"bool:f51", []byte("falze"), djs.TokenFalse, []byte{}, djs.InvalidJsonError},
-		{"bool:f52", []byte("fals"), djs.TokenFalse, []byte{}, djs.InvalidJsonError},
-		{"bool:f53", []byte("f "), djs.TokenFalse, []byte{}, djs.InvalidJsonError},
+		{"bool:f50", []byte(" folse "), djs.TokenUnknown, []byte("fo"), djs.InvalidJsonPtrError{Pos: 2}},
+		{"bool:f51", []byte("falze"), djs.TokenUnknown, []byte("falz"), djs.InvalidJsonPtrError{Pos: 3}},
+		{"bool:f52", []byte("fals"), djs.TokenUnknown, []byte("fals"), djs.InvalidJsonPtrError{Pos: 4, Err: io.EOF}},
+		{"bool:f53", []byte("f "), djs.TokenUnknown, []byte("f "), djs.InvalidJsonPtrError{Pos: 1}},
+		{"bool:f54", []byte("falsez"), djs.TokenUnknown, []byte("falsez"), djs.InvalidJsonPtrError{Pos: 5}},
+		{"bool:f55", []byte("false\t\t\tfalse"), djs.TokenUnknown, []byte("false\t\t\tf"), djs.InvalidJsonPtrError{Pos: 8}},
 		// True cases
 		{"bool:t00", []byte("true"), djs.TokenTrue, []byte("true"), nil},
 		{"bool:t01", []byte("\n\rtrue\n\r"), djs.TokenTrue, []byte("true"), nil},
 		// Invalid cases
-		{"bool:t50", []byte("truae "), djs.TokenTrue, []byte{}, djs.InvalidJsonError},
-		{"bool:t51", []byte("trues"), djs.TokenTrue, []byte{}, djs.InvalidJsonError},
-		{"bool:t52", []byte(" t "), djs.TokenTrue, []byte{}, djs.InvalidJsonError},
+		{"bool:t50", []byte("truae "), djs.TokenUnknown, []byte("trua"), djs.InvalidJsonPtrError{Pos: 3}},
+		{"bool:t51", []byte("trues"), djs.TokenUnknown, []byte("trues"), djs.InvalidJsonPtrError{Pos: 4}},
+		{"bool:t52", []byte(" t "), djs.TokenUnknown, []byte("t "), djs.InvalidJsonPtrError{Pos: 2}},
 	}
 	for _, el := range tbl {
 		RunTokeniserTest(el, s)
@@ -102,12 +99,12 @@ func (s *TokenizerTestSuite) TestTokenizer_Next_number() {
 		{"num:14", []byte("\n9064\n\r"), djs.TokenIntNumber, []byte("9064"), nil},
 		{"num:15", []byte("340282366920938463463374607431768211455"), djs.TokenIntNumber, []byte("340282366920938463463374607431768211455"), nil},
 		// Num errors
-		{"num:50", []byte("9 0 6 4"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"num:51", []byte("-e"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"num:52", []byte("$E1"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"num:53", []byte("1i1l1"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"num:54", []byte("1e"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"num:55", []byte("11$!"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
+		{"num:50", []byte("9 0 6 4"), djs.TokenUnknown, []byte(`9 `), djs.InvalidJsonPtrError{Pos: 1}},
+		{"num:51", []byte("-e"), djs.TokenUnknown, []byte(`-e`), djs.InvalidJsonPtrError{Pos: 1}},
+		{"num:52", []byte("$E1"), djs.TokenUnknown, []byte(`$`), djs.InvalidJsonPtrError{Pos: 0}},
+		{"num:53", []byte("1i1l1"), djs.TokenUnknown, []byte(`1i`), djs.InvalidJsonPtrError{Pos: 1}},
+		{"num:54", []byte("1e"), djs.TokenUnknown, []byte(`1e`), djs.InvalidJsonPtrError{Pos: 1}},
+		{"num:55", []byte("11$!"), djs.TokenUnknown, []byte(`11$`), djs.InvalidJsonPtrError{Pos: 2}},
 	}
 	for _, el := range tbl {
 		RunTokeniserTest(el, s)
@@ -142,24 +139,24 @@ func (s *TokenizerTestSuite) TestTokenizer_Next_float() {
 		{"float:18", []byte(" 0.01 "), djs.TokenFloatNumber, []byte("0.01"), nil},
 		{"float:19", []byte("\n\r-0.01\n\r"), djs.TokenFloatNumber, []byte("-0.01"), nil},
 		// Float errors
-		{"float:50", []byte("-"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"float:51", []byte("-e"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"float:52", []byte("0."), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"float:53", []byte("0.e"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"float:54", []byte("0.e1"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"float:55", []byte("0.1e"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"float:56", []byte("0.1e-1"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"float:57", []byte(".01"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"float:58", []byte("1i1.4l1"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"float:59", []byte("-3."), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"float:60", []byte("-3.e"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"float:61", []byte("3.1e"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"float:62", []byte("3.1415926535.89793"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"float:63", []byte("3.14159265Ee589793"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"float:64", []byte("3.14159265E+"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"float:65", []byte("3.14159265E-"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"float:66", []byte("161803398.874989zzz8204e28"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"float:67", []byte("16180.3398.874989e8204e+28"), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
+		{"float:50", []byte("-"), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"float:51", []byte("-e"), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"float:52", []byte("0."), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"float:53", []byte("0.e"), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"float:54", []byte("0.e1"), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"float:55", []byte("0.1e"), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"float:56", []byte("0.1e-1"), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"float:57", []byte(".01"), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"float:58", []byte("1i1.4l1"), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"float:59", []byte("-3."), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"float:60", []byte("-3.e"), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"float:61", []byte("3.1e"), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"float:62", []byte("3.1415926535.89793"), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"float:63", []byte("3.14159265Ee589793"), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"float:64", []byte("3.14159265E+"), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"float:65", []byte("3.14159265E-"), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"float:66", []byte("161803398.874989zzz8204e28"), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"float:67", []byte("16180.3398.874989e8204e+28"), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
 	}
 	for _, el := range tbl {
 		RunTokeniserTest(el, s)
@@ -198,14 +195,14 @@ func (s *TokenizerTestSuite) TestTokenizer_Next_string() {
 		{"str:24", []byte(`"\uD834\n"`), djs.TokenString, []byte(`\uD834\n`), nil},
 
 		// String errors
-		{"str:50", []byte(`"abc`), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"str:51", []byte(`"abc"xyz`), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"str:52", []byte(`abc"`), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"str:53", []byte(`"""`), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"str:54", []byte(`""\"`), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"str:55", []byte(`"\u2O70"`), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"str:56", []byte(`"\uD8Y4\uDU1E"`), djs.TokenUnknown, []byte{}, djs.InvalidJsonError},
-		{"str:57", []byte(`"\uD834\q"`), djs.TokenString, []byte{}, nil},
+		{"str:50", []byte(`"abc`), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"str:51", []byte(`"abc"xyz`), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 5}},
+		{"str:52", []byte(`abc"`), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"str:53", []byte(`"""`), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"str:54", []byte(`""\"`), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"str:55", []byte(`"\u2O70"`), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"str:56", []byte(`"\uD8Y4\uDU1E"`), djs.TokenUnknown, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
+		{"str:57", []byte(`"\uD834\q"`), djs.TokenString, []byte{}, djs.InvalidJsonPtrError{Pos: 0}},
 	}
 	for _, el := range testCases {
 		RunTokeniserTest(el, s)
@@ -239,14 +236,14 @@ func (s *TokenizerTestSuite) TestTokenizer_Next_time() {
 func RunTokeniserTest(el TokenizerTestElement, s *TokenizerTestSuite) {
 	s.T().Run(el.idx, func(t *testing.T) {
 		b := bytes.NewBuffer(el.in)
-		bf := bufio.NewReader(b)
-		sc := djs.NewJStructReader(bf)
+		sc := djs.NewJStructScanner(b)
 		tk := djs.NewJSStructTokenizer(sc)
 		e := tk.Next()
 		v := tk.Value()
 		k := tk.Kind()
+
+		assert.Equal(t, el.out, v, "%s Value %v != %v (%v)", el.idx, v, el.out, el.in)
+		assert.Equal(t, el.kind, k, "%s Kind %v != %v", el.idx, k, el.kind)
 		assert.ErrorIs(t, e, el.err, "%s Next err: %v", el.idx, e)
-		assert.Equal(t, v, el.out, "%s Value %v != %v", el.idx, v, el.out)
-		assert.Equal(t, k, el.kind, "%s Kind %v != %v", el.idx, k, el.kind)
 	})
 }

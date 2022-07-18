@@ -44,7 +44,7 @@ const (
 )
 
 func JStructParseReader(rd io.Reader, v JStructOps) (e error) {
-	rdBuf := bufio.NewReaderSize(rd, JStructReaderBufferSize)
+	rdBuf := bufio.NewReaderSize(rd, JStructScannerBufferSize)
 	var bt byte
 	for {
 		bt, e = rdBuf.ReadByte()
