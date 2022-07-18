@@ -42,3 +42,5 @@ Source from:
   * example.json.gz
 * https://github.com/ultrajson/ultrajson/tree/main/tests
   * sample.json.gz - a lot of unicode characters
+* https://github.com/json-iterator/test-data
+  * large-file.json.gz
