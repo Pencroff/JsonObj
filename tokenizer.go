@@ -1,6 +1,8 @@
 package JsonStruct
 
-import "fmt"
+import (
+	"io"
+)
 
 type TokenizerKind byte
 
@@ -40,19 +42,8 @@ var numberInt = [256]bool{
 	'9': true,
 }
 
-var numberFloat = [256]bool{
-	'0': true,
-	'1': true,
-	'2': true,
-	'3': true,
-	'4': true,
-	'5': true,
-	'6': true,
-	'7': true,
-	'8': true,
-	'9': true,
+var numberExponent = [256]bool{
 	'-': true,
-	'.': true,
 	'+': true,
 	'e': true,
 	'E': true,
@@ -158,8 +149,10 @@ func (t *JStructTokenizerImpl) Next() error {
 			return t.ReadFalse()
 		case 't':
 			return t.ReadTrue()
-		case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-			return t.ReadNumber()
+		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+			return t.ReadNumber(false)
+		case '-':
+			return t.ReadNumber(true)
 		case '"':
 			return t.ReadStringTime()
 		//case ':':
@@ -201,30 +194,148 @@ func (t *JStructTokenizerImpl) ReadTrue() error {
 	return t.hardcodedToken(TokenTrue, trueTokenData)
 }
 
-func (t *JStructTokenizerImpl) ReadNumber() error {
+func (t *JStructTokenizerImpl) ReadNumber(hasMinus bool) error {
 	var e error
 	t.scType = TokenIntNumber
-	st := t.sc.Index()
-	fmt.Println("ReadNumber:", st, string(t.sc.Current()))
+	first := t.sc.Index()
+	e = t.sc.Next()
+	ch := t.sc.Current()
+	hasIntPart := !hasMinus || numberInt[ch]
+	if e != nil || !numberInt[ch] {
+		goto afterLoop
+	}
+	// integer part
 	for {
 		e = t.sc.Next()
-		if e != nil {
+		ch = t.sc.Current()
+		if !numberInt[ch] || e != nil {
 			break
 		}
-		b := t.sc.Current()
-		if !numberInt[b] {
-			break
-		}
-
 	}
-	end := t.sc.Index()
-	e = t.nextKeepWhiteSpace()
-	if end == t.sc.Index() || whiteSpaces[t.sc.Current()] {
-		l := end - st + 1
-		t.v = t.sc.Bytes()[:l]
+afterLoop:
+	if e == io.EOF && numberInt[ch] {
+		t.v = t.sc.Bytes()
 		return nil
 	}
-	return e
+	if hasIntPart {
+		if ch == '.' {
+			return t.ReadFractionPart(first)
+		}
+		if ch == 'e' || ch == 'E' {
+			return t.ReadExponentPart(first)
+		}
+	} else {
+		goto errLbl
+	}
+
+	if e == nil && whiteSpaces[ch] {
+		idx := t.sc.Index()
+		e = t.nextKeepWhiteSpace()
+		if whiteSpaces[t.sc.Current()] {
+			l := idx - first
+			t.v = t.sc.Bytes()[:l]
+			return nil
+		}
+	}
+
+errLbl:
+	t.scType = TokenUnknown
+	t.v = t.sc.Bytes()
+	return InvalidJsonPtrError{Pos: t.sc.Index(), Err: e}
+}
+
+func (t *JStructTokenizerImpl) ReadFractionPart(firstIdx int) error {
+	var e error
+	t.scType = TokenFloatNumber
+
+	e = t.sc.Next()
+	ch := t.sc.Current()
+	hasFractionPart := numberInt[ch]
+	if e != nil || !numberInt[ch] {
+		goto afterLoop
+	}
+	for {
+		e = t.sc.Next()
+		ch = t.sc.Current()
+		if !numberInt[ch] || e != nil {
+			break
+		}
+	}
+afterLoop:
+	if e == io.EOF && numberInt[ch] {
+		t.v = t.sc.Bytes()
+		return nil
+	}
+	if hasFractionPart {
+		if ch == 'e' || ch == 'E' {
+			return t.ReadExponentPart(firstIdx)
+		}
+	} else {
+		goto errLbl
+	}
+
+	if e == nil && whiteSpaces[ch] {
+		idx := t.sc.Index()
+		e = t.nextKeepWhiteSpace()
+		ch = t.sc.Current()
+		if whiteSpaces[ch] {
+			l := idx - firstIdx
+			t.v = t.sc.Bytes()[:l]
+			return nil
+		}
+	}
+
+errLbl:
+	t.scType = TokenUnknown
+	t.v = t.sc.Bytes()
+
+	return InvalidJsonPtrError{Pos: t.sc.Index(), Err: e}
+}
+
+func (t *JStructTokenizerImpl) ReadExponentPart(first int) error {
+	var e error
+	t.scType = TokenFloatNumber
+	hasExpNumPart := false
+	e = t.sc.Next()
+	ch := t.sc.Current()
+	if ch == '+' || ch == '-' {
+		e = t.sc.Next()
+		ch = t.sc.Current()
+	}
+	hasExpNumPart = numberInt[ch]
+	if e != nil || !numberInt[ch] {
+		goto afterLoop
+	}
+
+	for {
+		e = t.sc.Next()
+		ch = t.sc.Current()
+		if !numberInt[ch] || e != nil {
+			break
+		}
+	}
+afterLoop:
+	if e == io.EOF && numberInt[ch] {
+		t.v = t.sc.Bytes()
+		return nil
+	}
+	if !hasExpNumPart {
+		goto errLbl
+	}
+	if e == nil && whiteSpaces[ch] {
+		idx := t.sc.Index()
+		e = t.nextKeepWhiteSpace()
+		ch = t.sc.Current()
+		if whiteSpaces[ch] {
+			l := idx - first
+			t.v = t.sc.Bytes()[:l]
+			return nil
+		}
+	}
+errLbl:
+	t.scType = TokenUnknown
+	t.v = t.sc.Bytes()
+	return InvalidJsonPtrError{Pos: t.sc.Index(), Err: e}
 }
 
 // Read json string or time in RFC3339 format
