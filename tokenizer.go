@@ -1,6 +1,7 @@
 package JsonStruct
 
 import (
+	"fmt"
 	"io"
 )
 
@@ -22,14 +23,44 @@ const (
 	TokenValueLast
 )
 
-var whiteSpaces = [256]bool{
+const (
+	minTimeLen = 22
+	maxTimeLen = 35
+)
+
+var spaceCh = [256]bool{
 	0x09: true, // tab
 	0x0A: true, // line feed
 	0x0D: true, // carriage return
 	0x20: true, // space
 }
 
-var numberInt = [256]bool{
+var hexCh = [256]bool{
+	'0': true,
+	'1': true,
+	'2': true,
+	'3': true,
+	'4': true,
+	'5': true,
+	'6': true,
+	'7': true,
+	'8': true,
+	'9': true,
+	'a': true,
+	'b': true,
+	'c': true,
+	'd': true,
+	'e': true,
+	'f': true,
+	'A': true,
+	'B': true,
+	'C': true,
+	'D': true,
+	'E': true,
+	'F': true,
+}
+
+var numCh = [256]bool{
 	'0': true,
 	'1': true,
 	'2': true,
@@ -42,7 +73,7 @@ var numberInt = [256]bool{
 	'9': true,
 }
 
-var numberExponent = [256]bool{
+var exponentCh = [256]bool{
 	'-': true,
 	'+': true,
 	'e': true,
@@ -52,6 +83,11 @@ var numberExponent = [256]bool{
 var nullTokenData = []byte(`null`)
 var falseTokenData = []byte(`false`)
 var trueTokenData = []byte(`true`)
+
+const (
+	backSlashCh = 0x5c // '\'
+	quoteCh     = 0x22 // '"'
+)
 
 func (k *TokenizerKind) String() string {
 	switch *k {
@@ -107,7 +143,7 @@ func (t *JStructTokenizerImpl) nextSkipWhiteSpace() error {
 			return err
 		}
 		b := t.sc.Current()
-		if whiteSpaces[b] {
+		if spaceCh[b] {
 			t.sc.Bytes()
 			continue
 		}
@@ -122,7 +158,7 @@ func (t *JStructTokenizerImpl) nextKeepWhiteSpace() error {
 			return err
 		}
 		b := t.sc.Current()
-		if whiteSpaces[b] {
+		if spaceCh[b] {
 			continue
 		}
 		return nil
@@ -195,25 +231,24 @@ func (t *JStructTokenizerImpl) ReadTrue() error {
 }
 
 func (t *JStructTokenizerImpl) ReadNumber(hasMinus bool) error {
-	var e error
 	t.scType = TokenIntNumber
 	first := t.sc.Index()
-	e = t.sc.Next()
+	e := t.sc.Next()
 	ch := t.sc.Current()
-	hasIntPart := !hasMinus || numberInt[ch]
-	if e != nil || !numberInt[ch] {
+	hasIntPart := !hasMinus || numCh[ch]
+	if e != nil || !numCh[ch] {
 		goto afterLoop
 	}
 	// integer part
 	for {
 		e = t.sc.Next()
 		ch = t.sc.Current()
-		if !numberInt[ch] || e != nil {
+		if !numCh[ch] || e != nil {
 			break
 		}
 	}
 afterLoop:
-	if e == io.EOF && numberInt[ch] {
+	if e == io.EOF && numCh[ch] {
 		t.v = t.sc.Bytes()
 		return nil
 	}
@@ -228,10 +263,10 @@ afterLoop:
 		goto errLbl
 	}
 
-	if e == nil && whiteSpaces[ch] {
+	if e == nil && spaceCh[ch] {
 		idx := t.sc.Index()
 		e = t.nextKeepWhiteSpace()
-		if whiteSpaces[t.sc.Current()] {
+		if spaceCh[t.sc.Current()] {
 			l := idx - first
 			t.v = t.sc.Bytes()[:l]
 			return nil
@@ -245,24 +280,22 @@ errLbl:
 }
 
 func (t *JStructTokenizerImpl) ReadFractionPart(firstIdx int) error {
-	var e error
 	t.scType = TokenFloatNumber
-
-	e = t.sc.Next()
+	e := t.sc.Next()
 	ch := t.sc.Current()
-	hasFractionPart := numberInt[ch]
-	if e != nil || !numberInt[ch] {
+	hasFractionPart := numCh[ch]
+	if e != nil || !numCh[ch] {
 		goto afterLoop
 	}
 	for {
 		e = t.sc.Next()
 		ch = t.sc.Current()
-		if !numberInt[ch] || e != nil {
+		if !numCh[ch] || e != nil {
 			break
 		}
 	}
 afterLoop:
-	if e == io.EOF && numberInt[ch] {
+	if e == io.EOF && numCh[ch] {
 		t.v = t.sc.Bytes()
 		return nil
 	}
@@ -274,11 +307,11 @@ afterLoop:
 		goto errLbl
 	}
 
-	if e == nil && whiteSpaces[ch] {
+	if e == nil && spaceCh[ch] {
 		idx := t.sc.Index()
 		e = t.nextKeepWhiteSpace()
 		ch = t.sc.Current()
-		if whiteSpaces[ch] {
+		if spaceCh[ch] {
 			l := idx - firstIdx
 			t.v = t.sc.Bytes()[:l]
 			return nil
@@ -293,40 +326,39 @@ errLbl:
 }
 
 func (t *JStructTokenizerImpl) ReadExponentPart(first int) error {
-	var e error
 	t.scType = TokenFloatNumber
 	hasExpNumPart := false
-	e = t.sc.Next()
+	e := t.sc.Next()
 	ch := t.sc.Current()
 	if ch == '+' || ch == '-' {
 		e = t.sc.Next()
 		ch = t.sc.Current()
 	}
-	hasExpNumPart = numberInt[ch]
-	if e != nil || !numberInt[ch] {
+	hasExpNumPart = numCh[ch]
+	if e != nil || !numCh[ch] {
 		goto afterLoop
 	}
 
 	for {
 		e = t.sc.Next()
 		ch = t.sc.Current()
-		if !numberInt[ch] || e != nil {
+		if !numCh[ch] || e != nil {
 			break
 		}
 	}
 afterLoop:
-	if e == io.EOF && numberInt[ch] {
+	if e == io.EOF && numCh[ch] {
 		t.v = t.sc.Bytes()
 		return nil
 	}
 	if !hasExpNumPart {
 		goto errLbl
 	}
-	if e == nil && whiteSpaces[ch] {
+	if e == nil && spaceCh[ch] {
 		idx := t.sc.Index()
 		e = t.nextKeepWhiteSpace()
 		ch = t.sc.Current()
-		if whiteSpaces[ch] {
+		if spaceCh[ch] {
 			l := idx - first
 			t.v = t.sc.Bytes()[:l]
 			return nil
@@ -344,35 +376,59 @@ func (t *JStructTokenizerImpl) ReadStringTime() error {
 	if err != nil {
 		return err
 	}
-	//l := len(t.buf)
-	//if l > 20 { // RFC3339 format
-	//	if t.buf[4] == '-' && t.buf[7] == '-' && t.buf[10] == 'T' &&
-	//		t.buf[13] == ':' && t.buf[16] == ':' {
-	//		b19 := t.buf[19]
-	//		if b19 == 'Z' || b19 == '+' || b19 == '-' || b19 == '.' {
-	//			t.scType = TokenTime
-	//		}
-	//	}
-	//}
+	fmt.Println(isTimeStrFn(t.v), string(t.v))
+	if isTimeStrFn(t.v) {
+		t.scType = TokenTime
+	}
 	return nil
 }
 
 func (t *JStructTokenizerImpl) ReadString() error {
 	t.scType = TokenString
-	//for {
-	//	b, err := t.rd.ReadByte()
-	//	if err != nil {
-	//		return err
-	//	}
-	//	if b == 0x22 {
-	//		last := len(t.buf) - 1
-	//		if t.buf[last] != 0x5c { // "\"
-	//			return nil
-	//		}
-	//	}
-	//	t.buf = append(t.buf, b)
-	//}
+	first := t.sc.Index()
+	var e error
+	var ch, prev byte
+	for {
+		e = t.sc.Next()
+		ch = t.sc.Current()
+		if ch == quoteCh && prev != backSlashCh || e != nil {
+			break
+		}
+		if ch == 'u' && prev == backSlashCh {
+			e = t.readHex(4)
+			ch = t.sc.Current()
+			if e != nil {
+				break
+			}
+		}
+		prev = ch
+	}
+	idx := t.sc.Index()
+	if e != nil && e != io.EOF {
+		goto errLbl
+	}
+	e = t.sc.Next()
+	ch = t.sc.Current()
+	if (e == nil && !spaceCh[ch]) ||
+		(e == io.EOF && ch != quoteCh) ||
+		(ch == quoteCh && t.sc.Index() != idx) {
+		goto errLbl
+	}
+	if e == nil && spaceCh[ch] {
+		idx := t.sc.Index()
+		e = t.nextKeepWhiteSpace()
+		if spaceCh[t.sc.Current()] {
+			l := idx - first
+			t.v = t.sc.Bytes()[:l]
+			return nil
+		}
+	}
+	t.v = t.sc.Bytes()
 	return nil
+errLbl:
+	t.scType = TokenUnknown
+	t.v = t.sc.Bytes()
+	return InvalidJsonPtrError{Pos: t.sc.Index(), Err: e}
 }
 
 func (t *JStructTokenizerImpl) hardcodedToken(kind TokenizerKind, origin []byte) error {
@@ -391,11 +447,91 @@ func (t *JStructTokenizerImpl) hardcodedToken(kind TokenizerKind, origin []byte)
 	idx = t.sc.Index()
 	// Check if it is a valid token ended by whitespaces
 	e := t.nextKeepWhiteSpace()
-	if idx == t.sc.Index() || whiteSpaces[t.sc.Current()] {
+	if idx == t.sc.Index() || spaceCh[t.sc.Current()] {
 		t.v = t.sc.Bytes()[:l]
 		return nil
 	}
 	t.scType = TokenUnknown
 	t.v = t.sc.Bytes()
 	return InvalidJsonPtrError{Pos: t.sc.Index(), Err: e}
+}
+
+func (t *JStructTokenizerImpl) readHex(n int) error {
+	var ch byte
+	for i := 0; i < n; i++ {
+		e := t.sc.Next()
+		ch = t.sc.Current()
+		if e != nil {
+			return e
+		}
+		if !hexCh[ch] {
+			return InvalidHexNumberError
+		}
+	}
+	return nil
+}
+
+func isTimeStrFn(v []byte) bool {
+	l := len(v)
+
+	if l < minTimeLen || l > maxTimeLen {
+		return false
+	}
+	if v[0] != '"' || v[l-1] != '"' {
+		return false
+	}
+	if !numCh[v[1]] || !numCh[v[2]] || !numCh[v[3]] || !numCh[v[4]] ||
+		v[5] != '-' ||
+		!numCh[v[6]] || !numCh[v[7]] ||
+		v[8] != '-' ||
+		!numCh[v[9]] || !numCh[v[10]] ||
+		v[11] != 'T' ||
+		!numCh[v[12]] || !numCh[v[13]] ||
+		v[14] != ':' ||
+		!numCh[v[15]] || !numCh[v[16]] ||
+		v[17] != ':' ||
+		!numCh[v[18]] || !numCh[v[19]] {
+		return false
+	}
+	timeZonePos := 20
+	for idx := 20; idx < l-1; idx++ {
+		ch := v[idx]
+		if idx == timeZonePos && ch == 'Z' {
+			idx += 1
+			ch = v[idx]
+			if ch != '"' {
+				return false
+			}
+			break
+		} else if idx == 20 && ch == '.' {
+			idx += 1
+			ch = v[idx]
+			if !numCh[ch] {
+				return false
+			}
+			for {
+				idx += 1
+				ch = v[idx]
+				if ch == 'Z' || ch == '+' || ch == '-' {
+					timeZonePos = idx
+					idx -= 1
+					break
+				}
+				if !numCh[ch] {
+					return false
+				}
+			}
+			timeZonePos = idx + 1
+		} else if idx == timeZonePos && (ch == '+' || ch == '-') {
+			if !numCh[v[idx+1]] || !numCh[v[idx+2]] ||
+				v[idx+3] != ':' ||
+				!numCh[v[idx+4]] || !numCh[v[idx+5]] ||
+				v[idx+6] != '"' {
+				return false
+			}
+		} else {
+			return false
+		}
+	}
+	return true
 }

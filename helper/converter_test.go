@@ -82,8 +82,8 @@ func (s *ConverterTestSuite) TestStringToIntTable() {
 	}
 	for idx, el := range parseInt64Tests {
 		i, ok := StringToInt(el.in)
-		s.Equal(el.out, i, "[%d] StringToInt(%q) = %d, %v", idx, el.in, i, ok)
-		s.Equal(el.ok, ok, "[%d] %v StringToInt(%q) = %d", idx, ok, el.in, i)
+		s.Equal(el.out, i, "[%d] StringToInt(%q) = %d, %in", idx, el.in, i, ok)
+		s.Equal(el.ok, ok, "[%d] %in StringToInt(%q) = %d", idx, ok, el.in, i)
 	}
 }
 
@@ -124,8 +124,8 @@ func (s *ConverterTestSuite) TestStringToUintTable() {
 	}
 	for idx, el := range parseUint64Tests {
 		i, ok := StringToUint(el.in)
-		s.Equal(el.out, i, "[%d] StringToUint(%q) = %d, %v", idx, el.in, i, ok)
-		s.Equal(el.ok, ok, "[%d] %v StringToUint(%q) = %d", idx, ok, el.in, i)
+		s.Equal(el.out, i, "[%d] StringToUint(%q) = %d, %in", idx, el.in, i, ok)
+		s.Equal(el.ok, ok, "[%d] %in StringToUint(%q) = %d", idx, ok, el.in, i)
 	}
 }
 

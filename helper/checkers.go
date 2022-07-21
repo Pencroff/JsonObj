@@ -1,5 +1,200 @@
 package helper
 
-import "regexp"
+import (
+	"regexp"
+)
 
-var IsTimeRe = regexp.MustCompile("^((?:(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?))(Z|[\\+-]\\d{2}:\\d{2})?)$")
+var IsTimeStrRe = regexp.MustCompile(`^((?:(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2}(?:\.\d+)?))(Z|[\+-]\d{2}:\d{2})?)$`)
+var IsTimeStr7Re = regexp.MustCompile(`^((?:(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2}(?:\.\d{1,7})?))(Z|[\+-]\d{2}:\d{2})?)$`)
+
+const (
+	minLen = 22
+	maxLen = 35
+)
+
+// Validated quoted string
+// "2015-05-14T12:34:56.379+02:00"
+// "2015-05-14T12:34:56.379Z"
+func IsTimeStrReFn(v []byte) bool {
+	l := len(v)
+	if l < minLen || l > maxLen {
+		return false
+	}
+	if v[0] != '"' || v[l-1] != '"' {
+		return false
+	}
+	return IsTimeStrRe.MatchString(string(v[1 : l-1]))
+}
+
+func IsTimeStrRe7Fn(v []byte) bool {
+	l := len(v)
+	if l < minLen || l > maxLen {
+		return false
+	}
+	if v[0] != '"' || v[l-1] != '"' {
+		return false
+	}
+	return IsTimeStr7Re.MatchString(string(v[1 : l-1]))
+}
+
+var numCh = [256]bool{
+	'0': true,
+	'1': true,
+	'2': true,
+	'3': true,
+	'4': true,
+	'5': true,
+	'6': true,
+	'7': true,
+	'8': true,
+	'9': true,
+}
+
+// Assuming time-secfrac is not more then 7 digits
+func IsTimeStr7Fn(v []byte) bool {
+	l := len(v)
+	timeZonePos := 20
+	if l < minLen || l > maxLen {
+		return false
+	}
+	if v[0] != '"' || v[l-1] != '"' {
+		return false
+	}
+	for idx := 1; idx < l-1; idx++ {
+		ch := v[idx]
+		if (idx == 5 || idx == 8) && ch == '-' {
+			continue
+		} else if idx == 11 && ch == 'T' {
+			continue
+		} else if (idx == 14 || idx == 17) && ch == ':' {
+			continue
+		} else if idx == timeZonePos && ch == 'Z' {
+			idx += 1
+			ch = v[idx]
+			if ch != '"' {
+				return false
+			}
+			break
+		} else if idx == 20 && ch == '.' {
+			idx += 1
+			ch = v[idx]
+			if !numCh[ch] {
+				return false
+			}
+			for i := 1; i < 7; i++ {
+				idx += 1
+				ch = v[idx]
+				if ch == 'Z' || ch == '+' || ch == '-' {
+					timeZonePos = idx
+					idx -= 1
+					break
+				}
+				if !numCh[ch] {
+					return false
+				}
+			}
+			timeZonePos = idx + 1
+		} else if idx == timeZonePos && (ch == '+' || ch == '-') {
+			idx += 1
+			ch = v[idx]
+			if !numCh[ch] {
+				return false
+			}
+			idx += 1
+			ch = v[idx]
+			if !numCh[ch] {
+				return false
+			}
+			idx += 1
+			ch = v[idx]
+			if ch != ':' {
+				return false
+			}
+			idx += 1
+			ch = v[idx]
+			if !numCh[ch] {
+				return false
+			}
+			idx += 1
+			ch = v[idx]
+			if !numCh[ch] {
+				return false
+			}
+			idx += 1
+			ch = v[idx]
+			if ch != '"' {
+				return false
+			}
+		} else if numCh[ch] {
+			continue
+		} else {
+			return false
+		}
+	}
+	return true
+}
+
+func IsTimeStrFn(v []byte) bool {
+	l := len(v)
+
+	if l < minLen || l > maxLen {
+		return false
+	}
+	if v[0] != '"' || v[l-1] != '"' {
+		return false
+	}
+	if !numCh[v[1]] || !numCh[v[2]] || !numCh[v[3]] || !numCh[v[4]] ||
+		v[5] != '-' ||
+		!numCh[v[6]] || !numCh[v[7]] ||
+		v[8] != '-' ||
+		!numCh[v[9]] || !numCh[v[10]] ||
+		v[11] != 'T' ||
+		!numCh[v[12]] || !numCh[v[13]] ||
+		v[14] != ':' ||
+		!numCh[v[15]] || !numCh[v[16]] ||
+		v[17] != ':' ||
+		!numCh[v[18]] || !numCh[v[19]] {
+		return false
+	}
+	timeZonePos := 20
+	for idx := 20; idx < l-1; idx++ {
+		ch := v[idx]
+		if idx == timeZonePos && ch == 'Z' {
+			idx += 1
+			ch = v[idx]
+			if ch != '"' {
+				return false
+			}
+			break
+		} else if idx == 20 && ch == '.' {
+			idx += 1
+			ch = v[idx]
+			if !numCh[ch] {
+				return false
+			}
+			for {
+				idx += 1
+				ch = v[idx]
+				if ch == 'Z' || ch == '+' || ch == '-' {
+					timeZonePos = idx
+					idx -= 1
+					break
+				}
+				if !numCh[ch] {
+					return false
+				}
+			}
+			timeZonePos = idx + 1
+		} else if idx == timeZonePos && (ch == '+' || ch == '-') {
+			if !numCh[v[idx+1]] || !numCh[v[idx+2]] ||
+				v[idx+3] != ':' ||
+				!numCh[v[idx+4]] || !numCh[v[idx+5]] ||
+				v[idx+6] != '"' {
+				return false
+			}
+		} else {
+			return false
+		}
+	}
+	return true
+}
