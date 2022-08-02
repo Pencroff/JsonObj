@@ -1,4 +1,4 @@
-package helper
+package experiment
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-var timeCheckerTestCases = []struct {
+var tiCheckerTestCases = []struct {
 	in  []byte
 	out bool
 }{
@@ -20,8 +20,8 @@ var timeCheckerTestCases = []struct {
 	// examples from rfc3339
 	{[]byte(`"1985-04-12T23:20:50.52Z"`), true},
 	{[]byte(`"1996-12-19T16:39:57-08:00"`), true},
-	{[]byte(`"1990-12-31T23:59:60Z"`), true},
-	{[]byte(`"1990-12-31T15:59:60-08:00"`), true},
+	{[]byte(`"1990-12-31T23:59:59Z"`), true},      // not passed by time.Parse with leap second, keep 59 instead of 60
+	{[]byte(`"1990-12-31T15:59:59-08:00"`), true}, // not passed by time.Parse with leap second, keep 59 instead of 60
 	{[]byte(`"1937-01-01T12:00:27.87+00:20"`), true},
 	// end examples from rfc3339
 	{[]byte(`"2022-02-24T04:00:00+02:00"`), true},
@@ -84,7 +84,7 @@ func Test_CheckerTestSuite(t *testing.T) {
 }
 
 func (s *CheckerTestSuite) SetupTest() {
-	s.tbl = timeCheckerTestCases
+	s.tbl = tiCheckerTestCases
 	s.size = 0
 	for _, el := range s.tbl {
 		s.size += len(el.in)
@@ -93,11 +93,46 @@ func (s *CheckerTestSuite) SetupTest() {
 	fmt.Println(s.size)
 }
 
-func (s *CheckerTestSuite) TestIsTimeFormat() {
+func (s *CheckerTestSuite) TestReFn() {
 	for idx, el := range s.tbl {
 		l := len(el.in)
-		s.T().Run("TimeFormat__"+string(el.in[1:l-1]), func(t *testing.T) {
-			assert.Equal(t, el.out, IsTimeFormat(el.in), "%d - %s", idx, string(el.in))
+		s.T().Run("RE__"+string(el.in[1:l-1]), func(t *testing.T) {
+			assert.Equal(t, el.out, IsTimeStrReFn(el.in), "%d - %s", idx, string(el.in))
+		})
+	}
+}
+func (s *CheckerTestSuite) TestRe6Fn() {
+	for idx, el := range s.tbl {
+		l := len(el.in)
+		s.T().Run("RE7__"+string(el.in[1:l-1]), func(t *testing.T) {
+			assert.Equal(t, el.out, IsTimeStrRe6Fn(el.in), "%d - %s", idx, string(el.in))
+		})
+	}
+}
+
+func (s *CheckerTestSuite) TestManual6Fn() {
+	for idx, el := range s.tbl {
+		l := len(el.in)
+		s.T().Run("Fn7__"+string(el.in[1:l-1]), func(t *testing.T) {
+			assert.Equal(t, el.out, IsTimeStr6Fn(el.in), "%d - %s", idx, string(el.in))
+		})
+	}
+}
+
+func (s *CheckerTestSuite) TestHeadTailFn() {
+	for idx, el := range s.tbl {
+		l := len(el.in)
+		s.T().Run("Fn__"+string(el.in[1:l-1]), func(t *testing.T) {
+			assert.Equal(t, el.out, IsTimeStrHeadTailFn(el.in), "%d - %s", idx, string(el.in))
+		})
+	}
+}
+
+func (s *CheckerTestSuite) TestIsTimeStrTime() {
+	for idx, el := range s.tbl {
+		l := len(el.in)
+		s.T().Run("Time__"+string(el.in[1:l-1]), func(t *testing.T) {
+			assert.Equal(t, el.out, IsTimeStrTime(el.in), "%d - %s", idx, string(el.in))
 		})
 	}
 }

@@ -1,4 +1,21 @@
-package helper
+package experiment
+
+const (
+	// MaxUint is the maximum value of uint
+	MaxUint    = ^uint64(0) //= 18446744073709551615
+	MaxIntUint = MaxUint >> 1
+	MinIntUint = MaxIntUint + 1
+	// MaxInt is the maximum value of int
+	MaxInt = int64(MaxIntUint)
+	// MinInt is the minimum value of int
+	MinInt = -MaxInt - 1
+	// MinSafeInt is the minimum value of int that is safe to use in Float64
+	// https://tc39.es/ecma262/#sec-number.min_safe_integer
+	MinSafeInt = int64(-(1<<53 - 1))
+	// MaxSafeInt is the maximum value of int that is safe to use in Float64
+	// https://tc39.es/ecma262/#sec-number.max_safe_integer
+	MaxSafeInt = int64(1<<53 - 1)
+)
 
 // FloatToInt - transforms float to the nearest integer
 // decided not to change default behavior

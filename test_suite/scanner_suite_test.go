@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	djs "github.com/Pencroff/JsonStruct"
-	h "github.com/Pencroff/JsonStruct/helper"
+	tl "github.com/Pencroff/JsonStruct/tool"
 	"github.com/stretchr/testify/suite"
 	"io"
 	"os"
@@ -176,8 +176,8 @@ func (s *ScannerTestSuite) TestScanner_DifferentBuffers() {
 }
 
 func Benchmark_Scanner(b *testing.B) {
-	data, _ := h.ReadGzip("../benchmark/data/canada.json.gz")
-	data2, _ := h.ReadGzip("../benchmark/data/large-file.json.gz")
+	data, _ := tl.ReadGzip("../benchmark/data/canada.json.gz")
+	data2, _ := tl.ReadGzip("../benchmark/data/large-file.json.gz")
 	offsetSize := 20
 	fmt.Printf("Data size: %.2f Mb\n", float64(len(data))/1024/1024)
 	var e error

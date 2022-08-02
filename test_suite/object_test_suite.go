@@ -2,7 +2,7 @@ package test_suite
 
 import (
 	djs "github.com/Pencroff/JsonStruct"
-	"github.com/Pencroff/JsonStruct/helper"
+	tl "github.com/Pencroff/JsonStruct/tool"
 	"github.com/stretchr/testify/suite"
 	"time"
 )
@@ -105,8 +105,8 @@ func (s *ObjectOpsTestSuite) TestSet() {
 
 		s.Equal(el.keyType.String(), v.Type().String(), "key: %s", el.key)
 		s.Equal(true, s.js.HasKey(el.key))
-		s.Equal(true, helper.CallMethod(v, el.isMethod))
-		s.Equal(el.resValue, helper.CallMethod(v, el.valueMethod))
+		s.Equal(true, tl.CallMethod(v, el.isMethod))
+		s.Equal(el.resValue, tl.CallMethod(v, el.valueMethod))
 	}
 
 	// default value

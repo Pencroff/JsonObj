@@ -4,6 +4,7 @@ import (
 	"fmt"
 	djs "github.com/Pencroff/JsonStruct"
 	"github.com/Pencroff/JsonStruct/helper"
+	tl "github.com/Pencroff/JsonStruct/tool"
 	"github.com/stretchr/testify/suite"
 	"time"
 )
@@ -63,7 +64,7 @@ func (s *PrimitiveOpsTestSuite) TestIsMethods() {
 		{"hello", "SetString", false, false, false, false, false, false, true},
 	}
 	for _, el := range tbl {
-		helper.CallMethod(s.js, el.setMethod, el.val)
+		tl.CallMethod(s.js, el.setMethod, el.val)
 		s.Equal(el.isBool, s.js.IsBool())
 		s.Equal(el.isNumber, s.js.IsNumber())
 		s.Equal(el.isInt, s.js.IsInt())
@@ -92,8 +93,8 @@ func (s *PrimitiveOpsTestSuite) TestGetSetValueTable() {
 		{"hello", "hello", "SetString", "String"},
 	}
 	for _, el := range tbl {
-		helper.CallMethod(s.js, el.setMethod, el.val)
-		s.Equal(el.res, helper.CallMethod(s.js, el.getMethod))
+		tl.CallMethod(s.js, el.setMethod, el.val)
+		s.Equal(el.res, tl.CallMethod(s.js, el.getMethod))
 	}
 }
 
@@ -144,7 +145,7 @@ func (s *PrimitiveOpsTestSuite) TestGetMethods() {
 		{"string:4", "-3.1415", "SetString", true, -3, 0, -3.1415, emptyTime, "-3.1415"},
 	}
 	for _, el := range tbl {
-		helper.CallMethod(s.js, el.setMethod, el.val)
+		tl.CallMethod(s.js, el.setMethod, el.val)
 		s.Equal(el.boolVal, s.js.Bool(), "#%s %s(%v) => Bool() = %v != %v", el.idx, el.setMethod, el.val, s.js.Bool(), el.boolVal)
 		s.Equal(el.intVal, s.js.Int(), "#%s %s(%v) => Int() = %v != %v", el.idx, el.setMethod, el.val, s.js.Int(), el.intVal)
 		s.Equal(el.uintVal, s.js.Uint(), "#%s %s(%v) => Uint() = %v != %v", el.idx, el.setMethod, el.val, s.js.Uint(), el.uintVal)
