@@ -60,6 +60,15 @@ const (
 	TabCh            = 0x09 // '\t'
 	NewLineCh        = 0x0a // '\n'
 	CarriageReturnCh = 0x0d // '\r'
+	OpenBraceCh      = 0x7b // '{'
+	CloseBraceCh     = 0x7d // '}'
+	OpenBracketCh    = 0x5b // '['
+	CloseBracketCh   = 0x5d // ']'
+	CommaCh          = 0x2c // ','
+	PointCh          = 0x2e // '.'
+	ExpCh            = 0x45 // 'E'
+	ExpSmCh          = 0x65 // 'e'
+	MinusCh          = 0x2d // '-'
 )
 
 const (

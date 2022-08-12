@@ -1,15 +1,29 @@
 package test_suite
 
 import (
-	"bytes"
 	djs "github.com/Pencroff/JsonStruct"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
+	"testing"
 )
+
+type ParserTestCase struct {
+	idx      string
+	data     []byte
+	err      error
+	validate func(t *testing.T, el ParserTestCase, js djs.JStructOps)
+}
+
+func TestJsonStructConverter_ParserTestSuite(t *testing.T) {
+	s := new(ParserTestSuite)
+	s.SetFactory(JsonStructFactory)
+	suite.Run(t, s)
+}
 
 type ParserTestSuite struct {
 	suite.Suite
 	factory func() djs.JStructOps
-	js      djs.JStructOps
+	mock    *MockedParser
 }
 
 func (s *ParserTestSuite) SetFactory(fn func() djs.JStructOps) {
@@ -20,18 +34,35 @@ func (s *ParserTestSuite) SetupTest() {
 	if s.factory == nil {
 		panic("factory not provided")
 	}
-	s.js = s.factory()
 }
 
-func (s *ParserTestSuite) TestUnmarshalFallDownToParse() {
-	mock := new(MockedParser)
-	djs.JStructParse = mock.JStructParseReader
-	data := []byte(`{"someKey":"value"}`)
-	rd := bytes.NewReader(data)
-	mock.On("JStructParseReader", rd, s.js).Return(nil)
-	djs.UnmarshalJSON(data, s.js)
-	mock.AssertExpectations(s.T())
-	djs.JStructParse = djs.JStructParseReader
+func (s *ParserTestSuite) TestParsing_PrimitiveValues() {
+	testCases := []ParserTestCase{
+		{"null", []byte(`null`), nil, func(t *testing.T, el ParserTestCase, js djs.JStructOps) {
+			assert.True(t, js.IsNull(), "%s IsNull() != true", el.idx)
+		}},
+		{"true", []byte(`true`), nil, func(t *testing.T, el ParserTestCase, js djs.JStructOps) {
+			assert.True(t, js.IsBool(), "%s IsBool() != true", el.idx)
+			assert.True(t, js.Bool(), "%s Bool() != true", el.idx)
+		}},
+		{"false", []byte(`false`), nil, func(t *testing.T, el ParserTestCase, js djs.JStructOps) {
+			assert.True(t, js.IsBool(), "%s IsBool() != true", el.idx)
+			assert.False(t, js.Bool(), "%s Bool() != false", el.idx)
+		}},
+	}
+	for _, el := range testCases {
+		RunParserTestCase(s, el)
+	}
+}
+
+func RunParserTestCase(s *ParserTestSuite, el ParserTestCase) {
+	s.T().Run(el.idx, func(t *testing.T) {
+		js := s.factory()
+		js.AsObject()
+		err := djs.UnmarshalJSON(el.data, js)
+		assert.Equal(t, err, el.err, "%s err != %v", el.idx, el.err)
+		el.validate(t, el, js)
+	})
 }
 
 //func (s *ParserTestSuite) TestParsing_PrimitiveValues() {
@@ -91,7 +122,7 @@ func (s *ParserTestSuite) TestUnmarshalFallDownToParse() {
 //	}
 //	for _, el := range tbl {
 //		rd := bytes.NewReader(el.in)
-//		e := djs.JStructParseReader(rd, s.js)
+//		e := djs.JStructParseFn(rd, s.js)
 //		v := s.factory()
 //		if el.value == nil {
 //			tl.CallMethod(v, el.method)

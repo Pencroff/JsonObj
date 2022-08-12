@@ -29,12 +29,6 @@ func TestJsonStruct_ArrayOps(t *testing.T) {
 	suite.Run(t, s)
 }
 
-func TestJsonStruct_ConverterOps(t *testing.T) {
-	s := new(JsonConverterTestSuite)
-	s.SetFactory(JsonStructConvertibleFactory)
-	suite.Run(t, s)
-}
-
 //--------------------------------------------------------------------------------------------------------------------
 func TestJsonStructValue_GeneralOpsTestSuite(t *testing.T) {
 	s := new(GeneralOpsTestSuite)

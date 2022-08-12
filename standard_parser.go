@@ -1,7 +1,6 @@
 package JsonStruct
 
 import (
-	"bufio"
 	"bytes"
 	"io"
 )
@@ -14,68 +13,63 @@ import (
 //   js.MarshalJSON = func (v js.JStructOps) ([]byte, error) { ... }
 var (
 	// UnmarshalJSON Func is injection point of json.Unmarshaller for JsonStruct
-	UnmarshalJSON = JStructParseByte
+	UnmarshalJSON = UnmarshalJSONFn
 	// MarshalJSON Func is injection point of json.Marshaller for JsonStruct
-	MarshalJSON = JStructSerializeByte
+	MarshalJSON = MarshalJSONFn
 	// JStructParse Func provides io.Reader based parsing of JSON data
-	JStructParse = JStructParseReader
+	JStructParse = JStructParseFn
 	// JStructSerialize Func provides io.Writer based serialization of JSON data
-	JStructSerialize = JStructSerializeWriter
+	JStructSerialize = JStructSerializeFn
 )
+
+//type ParseState byte
+//
+//const (
+//	None ParseState = iota
+//	PrimitiveValue
+//	Obj
+//	Key
+//	Value
+//	Arr
+//	ArrElement
+//)
 
 // Initial implementation of the JSON parser supported Standard ECMA-404 JSON format.
 // https://www.ecma-international.org/publications-and-standards/standards/ecma-404/
 
-func JStructParseByte(b []byte, v JStructOps) error {
+func UnmarshalJSONFn(b []byte, v JStructOps) error {
 	var rd = bytes.NewReader(b)
 	return JStructParse(rd, v)
 }
 
-type ParseState byte
-
-const (
-	None ParseState = iota
-	PrimitiveValue
-	Obj
-	Key
-	Value
-	Arr
-	ArrElement
-)
-
-func JStructParseReader(rd io.Reader, v JStructOps) (e error) {
-	rdBuf := bufio.NewReaderSize(rd, JStructScannerBufferSize)
-	var bt byte
-	for {
-		bt, e = rdBuf.ReadByte()
-		if e != nil {
-			if e == io.EOF {
-				e = nil
-				break
-			}
-		}
-		switch bt {
-		case '{':
-			//rdBuf.UnreadByte()
-			//e = parsing.ParseObj(rdBuf, v)
-		case '[':
-			//rdBuf.UnreadByte()
-			//e = parsing.ParseArr(rdBuf, v)
-		default:
-			ParsePrimitiveValue(bt, rdBuf, v)
-		}
+func JStructParseFn(rd io.Reader, v JStructOps) (e error) {
+	sc := NewJStructScanner(rd)
+	tc := NewJStructTokenizer(sc)
+	e = tc.Next()
+	if e != nil {
+		return
+	}
+	switch tc.Kind() {
+	case KindNull:
+		v.SetNull()
+	case KindTrue:
+		v.SetBool(true)
+	case KindFalse:
+		v.SetBool(false)
+	default:
+		e = InvalidJsonError{}
 	}
 	return
 }
 
-func JStructSerializeByte(v JStructOps) ([]byte, error) {
-	var b bytes.Buffer
-	err := JStructSerialize(v, &b)
+func MarshalJSONFn(v JStructOps) ([]byte, error) {
+	b := bytes.NewBuffer([]byte{})
+	err := JStructSerialize(v, b)
 	return b.Bytes(), err
 }
 
-func JStructSerializeWriter(v JStructOps, wr io.Writer) error {
-	return nil
+func JStructSerializeFn(v JStructOps, wr io.Writer) (e error) {
+	return
 }
 
 //func (s *JsonStruct) ToJson() string {

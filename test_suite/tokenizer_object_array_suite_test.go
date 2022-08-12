@@ -54,7 +54,7 @@ func (s *TokenizerTestObjArrSuite) TestTokenizer_Next_Array_Primitive() {
 			{"01", djs.KindTrue, djs.LevelValue, []byte(`true`), nil},
 			{"02", djs.KindFalse, djs.LevelValueLast, []byte(`false`), nil},
 		}},
-		{"arr:04", []byte(` [ 1, \n 2, \t 3 ] `), []TokenizerTestExpectation{
+		{"arr:04", []byte(" [ 1, \n 2, \t 3 ] "), []TokenizerTestExpectation{
 			{"00", djs.KindLiteral, djs.LevelArray, nil, nil},
 			{"01", djs.KindNumber, djs.LevelValue, []byte(`1`), nil},
 			{"02", djs.KindNumber, djs.LevelValue, []byte(`2`), nil},
@@ -68,15 +68,21 @@ func (s *TokenizerTestObjArrSuite) TestTokenizer_Next_Array_Primitive() {
 			{"00", djs.KindLiteral, djs.LevelArray, nil, nil},
 			{"01", djs.KindFloatNumber, djs.LevelValue, []byte(`0.1`), nil},
 			{"02", djs.KindNumber, djs.LevelValue, []byte(`-1`), nil},
-			{"03", djs.KindFloatNumber, djs.LevelValueLast, []byte(`-3.14`), nil},
+			{"03", djs.KindFloatNumber, djs.LevelValueLast, []byte(`3.14`), nil},
 		}},
-		{"arr:06", []byte(`["a","b","c"]`), []TokenizerTestExpectation{
+		{"arr:06", []byte(` [ 1.1e1, 1.1e-2, -1.1e+3 ] `), []TokenizerTestExpectation{
+			{"00", djs.KindLiteral, djs.LevelArray, nil, nil},
+			{"01", djs.KindFloatNumber, djs.LevelValue, []byte(`1.1e1`), nil},
+			{"02", djs.KindFloatNumber, djs.LevelValue, []byte(`1.1e-2`), nil},
+			{"03", djs.KindFloatNumber, djs.LevelValueLast, []byte(`-1.1e+3`), nil},
+		}},
+		{"arr:07", []byte(`["a","b","c"]`), []TokenizerTestExpectation{
 			{"00", djs.KindLiteral, djs.LevelArray, nil, nil},
 			{"01", djs.KindString, djs.LevelValue, []byte(`"a"`), nil},
 			{"02", djs.KindString, djs.LevelValue, []byte(`"b"`), nil},
 			{"03", djs.KindString, djs.LevelValueLast, []byte(`"c"`), nil},
 		}},
-		{"arr:07", []byte(`["1970-01-01T00:00:00Z","1985-04-12T23:20:50.Z"]`), []TokenizerTestExpectation{
+		{"arr:08", []byte(`["1970-01-01T00:00:00Z","1985-04-12T23:20:50.Z"]`), []TokenizerTestExpectation{
 			{"00", djs.KindLiteral, djs.LevelArray, nil, nil},
 			{"01", djs.KindTime, djs.LevelValue, []byte(`"1970-01-01T00:00:00Z"`), nil},
 			{"03", djs.KindString, djs.LevelValueLast, []byte(`"1985-04-12T23:20:50.Z"`), nil},
@@ -89,20 +95,20 @@ func (s *TokenizerTestObjArrSuite) TestTokenizer_Next_Array_Primitive() {
 		}},
 		{"arr:101", []byte(` [ null, true  `), []TokenizerTestExpectation{
 			{"00", djs.KindLiteral, djs.LevelArray, nil, nil},
-			{"01", djs.KindNull, djs.LevelArray, []byte(`null`), nil},
-			{"02", djs.KindUnknown, djs.LevelArray, []byte(`true  `),
+			{"01", djs.KindNull, djs.LevelValue, []byte(`null`), nil},
+			{"02", djs.KindUnknown, djs.LevelValue, []byte(`true  `),
 				djs.InvalidJsonPtrError{Pos: 14, Err: io.EOF}},
 		}},
 		{"arr:102", []byte(` [ 1, 2 } `), []TokenizerTestExpectation{
 			{"00", djs.KindLiteral, djs.LevelArray, nil, nil},
-			{"01", djs.KindNumber, djs.LevelArray, []byte(`1`), nil},
-			{"02", djs.KindUnknown, djs.LevelArray, []byte(`2 }`),
+			{"01", djs.KindNumber, djs.LevelValue, []byte(`1`), nil},
+			{"02", djs.KindUnknown, djs.LevelValue, []byte(`2 }`),
 				djs.InvalidJsonPtrError{Pos: 8}},
 		}},
 		{"arr:103", []byte(` ["extra comma",] `), []TokenizerTestExpectation{
 			{"00", djs.KindLiteral, djs.LevelArray, nil, nil},
-			{"01", djs.KindString, djs.LevelArray, []byte("extra comma"), nil},
-			{"02", djs.KindUnknown, djs.LevelArray, []byte(`]`),
+			{"01", djs.KindString, djs.LevelValue, []byte(`"extra comma"`), nil},
+			{"02", djs.KindUnknown, djs.LevelValue, []byte(`]`),
 				djs.InvalidJsonTokenPtrError{Pos: 16}},
 		}},
 		{"arr:104", []byte(` ["double extra comma",,] `), []TokenizerTestExpectation{
@@ -164,17 +170,24 @@ func (s *TokenizerTestObjArrSuite) TestTokenizer_Next_Array_Primitive() {
 			{"02", djs.KindUnknown, djs.LevelArray, []byte(`"	`),
 				djs.InvalidJsonTokenPtrError{Pos: 3, Err: djs.InvalidCharacterError}},
 		}},
+		{"arr:115", []byte(` [ 1, 2 ] [ ] `), []TokenizerTestExpectation{
+			{"00", djs.KindLiteral, djs.LevelArray, nil, nil},
+			{"01", djs.KindNumber, djs.LevelValue, []byte(`1`), nil},
+			{"02", djs.KindNumber, djs.LevelValueLast, []byte(`2`), nil},
+			{"03", djs.KindUnknown, djs.LevelRoot, []byte(" ["),
+				djs.InvalidJsonTokenPtrError{Pos: 10}},
+		}},
 	}
 	for _, el := range tbl {
-		RunTokenizerTestCaseAndExpectations(el, s)
+		RunTokenizerTestCaseAndExpectations(s, el)
 	}
 }
 
-func RunTokenizerTestCaseAndExpectations(el TokenizerTestObjArrElement, s *TokenizerTestObjArrSuite) {
+func RunTokenizerTestCaseAndExpectations(s *TokenizerTestObjArrSuite, el TokenizerTestObjArrElement) {
 	s.T().Run(el.idx, func(t *testing.T) {
 		b := bytes.NewBuffer(el.in)
 		sc := djs.NewJStructScanner(b)
-		tk := djs.NewJSStructTokenizer(sc)
+		tk := djs.NewJStructTokenizer(sc)
 		for _, exp := range el.out {
 			e := tk.Next()
 			v := tk.Value()

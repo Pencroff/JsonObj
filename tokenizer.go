@@ -86,8 +86,8 @@ type JStructTokenizer interface {
 	Level() TokenizerLevel
 }
 
-func NewJSStructTokenizer(sc JStructScanner) JStructTokenizer {
-	return &JStructTokenizerImpl{sc: sc}
+func NewJStructTokenizer(sc JStructScanner) JStructTokenizer {
+	return &JStructTokenizerImpl{sc: sc, scLevel: LevelRoot, depth: []TokenizerLevel{LevelRoot}}
 }
 
 type JStructTokenizerImpl struct {
@@ -95,6 +95,7 @@ type JStructTokenizerImpl struct {
 	scType  TokenizerKind
 	scLevel TokenizerLevel
 	v       []byte
+	depth   []TokenizerLevel
 }
 
 func (t *JStructTokenizerImpl) nextSkipWhiteSpace() error {
@@ -118,8 +119,8 @@ func (t *JStructTokenizerImpl) nextKeepWhiteSpace() error {
 		if err != nil {
 			return err
 		}
-		b := t.sc.Current()
-		if h.SpaceCh[b] {
+		ch := t.sc.Current()
+		if h.SpaceCh[ch] {
 			continue
 		}
 		return nil
@@ -128,10 +129,17 @@ func (t *JStructTokenizerImpl) nextKeepWhiteSpace() error {
 
 func (t *JStructTokenizerImpl) Next() error {
 	t.scType = KindUnknown
-	t.scLevel = LevelUnknown
+	//t.scLevel = LevelUnknown
+	if t.scLevel == LevelValueLast || t.scLevel == LevelArrayEnd {
+		t.PopLevel()
+	}
 	for {
 		err := t.nextSkipWhiteSpace()
 		if err != nil {
+			idx := t.sc.Index()
+			if idx > -1 {
+				return InvalidJsonPtrError{Err: err, Pos: t.sc.Index()}
+			}
 			return InvalidJsonError{Err: err}
 		}
 		switch t.sc.Current() {
@@ -139,26 +147,22 @@ func (t *JStructTokenizerImpl) Next() error {
 		//	t.scType = TokenObject
 		//	return nil
 		case '[':
-			t.scLevel = LevelArray
+			t.PushLevel(LevelArray)
 			t.scType = KindLiteral
+			t.sc.Bytes()
+			t.v = nil
 			return nil
 		case 'n':
-			t.scLevel = LevelRoot
 			return t.ReadNull()
 		case 'f':
-			t.scLevel = LevelRoot
 			return t.ReadFalse()
 		case 't':
-			t.scLevel = LevelRoot
 			return t.ReadTrue()
 		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-			t.scLevel = LevelRoot
 			return t.ReadNumber(false)
-		case '-':
-			t.scLevel = LevelRoot
+		case h.MinusCh:
 			return t.ReadNumber(true)
-		case '"':
-			t.scLevel = LevelRoot
+		case h.QuoteCh:
 			return t.ReadStringTime()
 		//case ':':
 		//	t.scType = TokenKey
@@ -167,6 +171,7 @@ func (t *JStructTokenizerImpl) Next() error {
 		//	t.scType = TokenValue
 		//	return nil
 		case ']':
+			t.PopLevel()
 			t.scLevel = LevelArrayEnd
 			t.scType = KindLiteral
 			return nil
@@ -191,6 +196,23 @@ func (t *JStructTokenizerImpl) Level() TokenizerLevel {
 	return t.scLevel
 }
 
+// PushLevel pushes the current level to the stack and sets the new level to the given value
+func (t *JStructTokenizerImpl) PushLevel(l TokenizerLevel) {
+	t.depth = append(t.depth, t.scLevel)
+	t.scLevel = l
+}
+
+// PopLevel pops the current level from the stack and sets the new level to the popped value
+func (t *JStructTokenizerImpl) PopLevel() {
+	last := len(t.depth) - 1
+	if last > 0 {
+		t.depth = t.depth[:last]
+		last -= 1
+
+	}
+	t.scLevel = t.depth[last]
+}
+
 func (t *JStructTokenizerImpl) ReadNull() error {
 	return t.hardcodedToken(KindNull, h.NullTokenData)
 }
@@ -204,8 +226,9 @@ func (t *JStructTokenizerImpl) ReadTrue() error {
 }
 
 func (t *JStructTokenizerImpl) ReadNumber(hasMinus bool) error {
+	var idx, l int
 	t.scType = KindNumber
-	first := t.sc.Index()
+	firstIdx := t.sc.Index()
 	e := t.sc.Next()
 	ch := t.sc.Current()
 	hasIntPart := !hasMinus || h.NumCh[ch]
@@ -221,31 +244,44 @@ func (t *JStructTokenizerImpl) ReadNumber(hasMinus bool) error {
 		}
 	}
 afterLoop:
+	idx = t.sc.Index()
+	l = idx - firstIdx
 	if e == io.EOF && h.NumCh[ch] {
 		t.v = t.sc.Bytes()
 		return nil
 	}
-	if hasIntPart {
-		if ch == '.' {
-			return t.ReadFractionPart(first)
-		}
-		if ch == 'e' || ch == 'E' {
-			return t.ReadExponentPart(first)
-		}
-	} else {
+	if !hasIntPart || e != nil {
 		goto errLbl
 	}
-
-	if e == nil && h.SpaceCh[ch] {
-		idx := t.sc.Index()
+	if ch == h.PointCh {
+		return t.ReadFractionPart(firstIdx)
+	}
+	if ch == h.ExpSmCh || ch == h.ExpCh {
+		return t.ReadExponentPart(firstIdx)
+	}
+	if t.scLevel == LevelRoot && !h.SpaceCh[ch] {
+		goto errLbl
+	}
+	if h.SpaceCh[ch] {
 		e = t.nextKeepWhiteSpace()
-		if h.SpaceCh[t.sc.Current()] {
-			l := idx - first
+		ch = t.sc.Current()
+		if h.SpaceCh[ch] {
 			t.v = t.sc.Bytes()[:l]
 			return nil
 		}
 	}
-
+	if t.scLevel != LevelRoot {
+		if ch == h.CommaCh {
+			t.v = t.sc.Bytes()[:l]
+			t.scLevel = LevelValue
+			return nil
+		}
+		if ch == h.CloseBracketCh {
+			t.v = t.sc.Bytes()[:l]
+			t.scLevel = LevelValueLast
+			return nil
+		}
+	}
 errLbl:
 	t.scType = KindUnknown
 	t.v = t.sc.Bytes()
@@ -253,6 +289,7 @@ errLbl:
 }
 
 func (t *JStructTokenizerImpl) ReadFractionPart(firstIdx int) error {
+	var idx, l int
 	t.scType = KindFloatNumber
 	e := t.sc.Next()
 	ch := t.sc.Current()
@@ -268,29 +305,41 @@ func (t *JStructTokenizerImpl) ReadFractionPart(firstIdx int) error {
 		}
 	}
 afterLoop:
+	idx = t.sc.Index()
+	l = idx - firstIdx
 	if e == io.EOF && h.NumCh[ch] {
 		t.v = t.sc.Bytes()
 		return nil
 	}
-	if hasFractionPart {
-		if ch == 'e' || ch == 'E' {
-			return t.ReadExponentPart(firstIdx)
-		}
-	} else {
+	if !hasFractionPart || e != nil {
 		goto errLbl
 	}
-
-	if e == nil && h.SpaceCh[ch] {
-		idx := t.sc.Index()
+	if ch == h.ExpSmCh || ch == h.ExpCh {
+		return t.ReadExponentPart(firstIdx)
+	}
+	if t.scLevel == LevelRoot && !h.SpaceCh[ch] {
+		goto errLbl
+	}
+	if h.SpaceCh[ch] {
 		e = t.nextKeepWhiteSpace()
 		ch = t.sc.Current()
 		if h.SpaceCh[ch] {
-			l := idx - firstIdx
 			t.v = t.sc.Bytes()[:l]
 			return nil
 		}
 	}
-
+	if t.scLevel != LevelRoot {
+		if ch == h.CommaCh {
+			t.v = t.sc.Bytes()[:l]
+			t.scLevel = LevelValue
+			return nil
+		}
+		if ch == h.CloseBracketCh {
+			t.v = t.sc.Bytes()[:l]
+			t.scLevel = LevelValueLast
+			return nil
+		}
+	}
 errLbl:
 	t.scType = KindUnknown
 	t.v = t.sc.Bytes()
@@ -298,7 +347,8 @@ errLbl:
 	return InvalidJsonPtrError{Pos: t.sc.Index(), Err: e}
 }
 
-func (t *JStructTokenizerImpl) ReadExponentPart(first int) error {
+func (t *JStructTokenizerImpl) ReadExponentPart(firstIdx int) error {
+	var idx, l int
 	t.scType = KindFloatNumber
 	hasExpNumPart := false
 	e := t.sc.Next()
@@ -320,23 +370,48 @@ func (t *JStructTokenizerImpl) ReadExponentPart(first int) error {
 		}
 	}
 afterLoop:
+	idx = t.sc.Index()
+	l = idx - firstIdx
 	if e == io.EOF && h.NumCh[ch] {
 		t.v = t.sc.Bytes()
 		return nil
 	}
-	if !hasExpNumPart {
+	if !hasExpNumPart || e != nil {
 		goto errLbl
 	}
-	if e == nil && h.SpaceCh[ch] {
-		idx := t.sc.Index()
+	if t.scLevel == LevelRoot && !h.SpaceCh[ch] {
+		goto errLbl
+	}
+	if h.SpaceCh[ch] {
 		e = t.nextKeepWhiteSpace()
 		ch = t.sc.Current()
 		if h.SpaceCh[ch] {
-			l := idx - first
 			t.v = t.sc.Bytes()[:l]
 			return nil
 		}
 	}
+	if t.scLevel != LevelRoot {
+		if ch == h.CommaCh {
+			t.v = t.sc.Bytes()[:l]
+			t.scLevel = LevelValue
+			return nil
+		}
+		if ch == h.CloseBracketCh {
+			t.v = t.sc.Bytes()[:l]
+			t.scLevel = LevelValueLast
+			return nil
+		}
+	}
+	//if e == nil && h.SpaceCh[ch] {
+	//	idx := t.sc.Index()
+	//	e = t.nextKeepWhiteSpace()
+	//	ch = t.sc.Current()
+	//	if h.SpaceCh[ch] {
+	//		l := idx - first
+	//		t.v = t.sc.Bytes()[:l]
+	//		return nil
+	//	}
+	//}
 errLbl:
 	t.scType = KindUnknown
 	t.v = t.sc.Bytes()
@@ -361,6 +436,7 @@ func (t *JStructTokenizerImpl) ReadString() error {
 	var e error
 	var ch, prev byte
 	var escaped bool
+	var l, idx int
 	for {
 		e = t.sc.Next()
 		ch = t.sc.Current()
@@ -372,9 +448,8 @@ func (t *JStructTokenizerImpl) ReadString() error {
 			switch ch {
 			case 'u':
 				e = t.readHex(4)
-				ch = t.sc.Current()
 				if e != nil {
-					goto finishLoop
+					goto errLbl
 				}
 			case 0x22, 0x2F, 0x5c, 'b', 'f', 'n', 'r', 't':
 				escaped = true
@@ -382,53 +457,51 @@ func (t *JStructTokenizerImpl) ReadString() error {
 			default:
 				if !escaped {
 					e = InvalidEscapeCharacterError
-					goto finishLoop
+					goto errLbl
 				}
 				escaped = false
 			}
 		}
 		if ch == h.TabCh || ch == h.NewLineCh || ch == h.CarriageReturnCh {
 			e = InvalidCharacterError
-			goto finishLoop
+			goto errLbl
 		}
 		prev = ch
 	}
-finishLoop:
-	idx := t.sc.Index()
-	if e != nil && e != io.EOF {
-		goto errLbl
-	}
-	e = t.sc.Next()
+	idx = t.sc.Index()
+	l = idx - first + 1
+	e = t.nextKeepWhiteSpace()
 	ch = t.sc.Current()
-	if (e == nil && !h.SpaceCh[ch]) ||
-		(e == io.EOF && ch != h.QuoteCh) ||
-		(ch == h.QuoteCh && t.sc.Index() != idx) {
-		goto errLbl
+	if idx == t.sc.Index() && ch == h.QuoteCh ||
+		h.SpaceCh[ch] {
+		t.v = t.sc.Bytes()[:l]
+		return nil
 	}
-	if e == nil && h.SpaceCh[ch] {
-		idx := t.sc.Index()
-		e = t.nextKeepWhiteSpace()
-		if h.SpaceCh[t.sc.Current()] {
-			l := idx - first
+	if t.scLevel != LevelRoot {
+		if ch == h.CommaCh {
 			t.v = t.sc.Bytes()[:l]
+			t.scLevel = LevelValue
+			return nil
+		}
+		if ch == h.CloseBracketCh {
+			t.v = t.sc.Bytes()[:l]
+			t.scLevel = LevelValueLast
 			return nil
 		}
 	}
-	t.v = t.sc.Bytes()
-	return nil
 errLbl:
 	t.scType = KindUnknown
 	t.v = t.sc.Bytes()
 	return InvalidJsonPtrError{Pos: t.sc.Index(), Err: e}
 }
 
-func (t *JStructTokenizerImpl) hardcodedToken(kind TokenizerKind, origin []byte) error {
+func (t *JStructTokenizerImpl) hardcodedToken(
+	kind TokenizerKind, origin []byte) error {
 	t.scType = kind
 	l := len(origin)
 	idx := t.sc.Index()
 	for i, b := range origin[1:] {
 		e := t.sc.Next()
-
 		if b != t.sc.Current() || e != nil {
 			t.v = t.sc.Bytes()
 			t.scType = KindUnknown
@@ -438,10 +511,24 @@ func (t *JStructTokenizerImpl) hardcodedToken(kind TokenizerKind, origin []byte)
 	idx = t.sc.Index()
 	// Check if it is a valid token ended by whitespaces
 	e := t.nextKeepWhiteSpace()
-	if idx == t.sc.Index() || h.SpaceCh[t.sc.Current()] {
+	ch := t.sc.Current()
+	if t.scLevel == LevelRoot && (idx == t.sc.Index() || h.SpaceCh[ch]) {
 		t.v = t.sc.Bytes()[:l]
 		return nil
 	}
+	if t.scLevel != LevelRoot {
+		if ch == h.CommaCh {
+			t.v = t.sc.Bytes()[:l]
+			t.scLevel = LevelValue
+			return nil
+		}
+		if ch == h.CloseBracketCh {
+			t.v = t.sc.Bytes()[:l]
+			t.scLevel = LevelValueLast
+			return nil
+		}
+	}
+
 	t.scType = KindUnknown
 	t.v = t.sc.Bytes()
 	return InvalidJsonPtrError{Pos: t.sc.Index(), Err: e}

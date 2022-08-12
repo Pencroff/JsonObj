@@ -43,7 +43,7 @@ func (s *TokenizerTestPrimitiveSuite) TestTokenizer_Next_null() {
 		{"null:8", []byte(" null "), djs.KindNull, djs.LevelRoot, []byte("null"), nil},
 		{"null:9", []byte(" null\n"), djs.KindNull, djs.LevelRoot, []byte("null"), nil},
 		// Invalid cases
-		{"null:100", []byte(""), djs.KindUnknown, djs.LevelUnknown, []byte(nil), djs.InvalidJsonError{Err: io.EOF}},
+		{"null:100", []byte(""), djs.KindUnknown, djs.LevelRoot, []byte(nil), djs.InvalidJsonError{Err: io.EOF}},
 		{"null:101", []byte("n"), djs.KindUnknown, djs.LevelRoot, []byte("n"), djs.InvalidJsonPtrError{Pos: 1, Err: io.EOF}},
 		{"null:102", []byte("   nill"), djs.KindUnknown, djs.LevelRoot, []byte("ni"), djs.InvalidJsonPtrError{Pos: 4}},
 		{"null:103", []byte("nnn"), djs.KindUnknown, djs.LevelRoot, []byte("nn"), djs.InvalidJsonPtrError{Pos: 1}},
@@ -52,7 +52,7 @@ func (s *TokenizerTestPrimitiveSuite) TestTokenizer_Next_null() {
 		{"null:106", []byte("null\t\t\tnull"), djs.KindUnknown, djs.LevelRoot, []byte("null\t\t\tn"), djs.InvalidJsonPtrError{Pos: 7}},
 	}
 	for _, el := range tbl {
-		RunTokenizerTestPrimitiveCase(el, s)
+		RunTokenizerTestPrimitiveCase(s, el)
 	}
 }
 
@@ -77,7 +77,7 @@ func (s *TokenizerTestPrimitiveSuite) TestTokenizer_Next_bool() {
 		{"bool:t102", []byte(" t "), djs.KindUnknown, djs.LevelRoot, []byte("t "), djs.InvalidJsonPtrError{Pos: 2}},
 	}
 	for _, el := range tbl {
-		RunTokenizerTestPrimitiveCase(el, s)
+		RunTokenizerTestPrimitiveCase(s, el)
 	}
 }
 
@@ -110,7 +110,7 @@ func (s *TokenizerTestPrimitiveSuite) TestTokenizer_Next_number() {
 		{"num:107", []byte("- 123"), djs.KindUnknown, djs.LevelRoot, []byte(`- `), djs.InvalidJsonPtrError{Pos: 1}},
 	}
 	for _, el := range tbl {
-		RunTokenizerTestPrimitiveCase(el, s)
+		RunTokenizerTestPrimitiveCase(s, el)
 	}
 }
 
@@ -149,7 +149,7 @@ func (s *TokenizerTestPrimitiveSuite) TestTokenizer_Next_float() {
 		{"float:103", []byte("0.e"), djs.KindUnknown, djs.LevelRoot, []byte("0.e"), djs.InvalidJsonPtrError{Pos: 2}},
 		{"float:104", []byte("0.e1"), djs.KindUnknown, djs.LevelRoot, []byte("0.e"), djs.InvalidJsonPtrError{Pos: 2}},
 		{"float:105", []byte("0.1e"), djs.KindUnknown, djs.LevelRoot, []byte("0.1e"), djs.InvalidJsonPtrError{Pos: 3, Err: io.EOF}},
-		{"float:106", []byte(".01"), djs.KindUnknown, djs.LevelUnknown, []byte(nil), djs.InvalidJsonError{}},
+		{"float:106", []byte(".01"), djs.KindUnknown, djs.LevelRoot, []byte(nil), djs.InvalidJsonError{}},
 		{"float:107", []byte("123.4l1"), djs.KindUnknown, djs.LevelRoot, []byte("123.4l"), djs.InvalidJsonPtrError{Pos: 5}},
 		{"float:108", []byte("-3."), djs.KindUnknown, djs.LevelRoot, []byte("-3."), djs.InvalidJsonPtrError{Pos: 2, Err: io.EOF}},
 		{"float:109", []byte("-3.e"), djs.KindUnknown, djs.LevelRoot, []byte("-3.e"), djs.InvalidJsonPtrError{Pos: 3}},
@@ -163,7 +163,7 @@ func (s *TokenizerTestPrimitiveSuite) TestTokenizer_Next_float() {
 		{"float:117", []byte("16180.3398.874989e8204e+28"), djs.KindUnknown, djs.LevelRoot, []byte("16180.3398."), djs.InvalidJsonPtrError{Pos: 10}},
 	}
 	for _, el := range tbl {
-		RunTokenizerTestPrimitiveCase(el, s)
+		RunTokenizerTestPrimitiveCase(s, el)
 	}
 }
 
@@ -202,7 +202,7 @@ func (s *TokenizerTestPrimitiveSuite) TestTokenizer_Next_string() {
 			djs.InvalidJsonPtrError{Pos: 3, Err: io.EOF}},
 		{"str:101", []byte(`"abc"xyz`), djs.KindUnknown, djs.LevelRoot, []byte(`"abc"x`),
 			djs.InvalidJsonPtrError{Pos: 5}},
-		{"str:102", []byte(`abc"`), djs.KindUnknown, djs.LevelUnknown, []byte(nil),
+		{"str:102", []byte(`abc"`), djs.KindUnknown, djs.LevelRoot, []byte(nil),
 			djs.InvalidJsonError{}},
 		{"str:103", []byte(`"""`), djs.KindUnknown, djs.LevelRoot, []byte(`"""`),
 			djs.InvalidJsonPtrError{Pos: 2}},
@@ -225,7 +225,7 @@ func (s *TokenizerTestPrimitiveSuite) TestTokenizer_Next_string() {
 		// {"str:25", []byte(`"\uD834\n"`), djs.KindUnknown, djs.LevelRoot, []byte(`"\uD834\n`), djs.InvalidJsonPtrError{Pos: 8}},
 	}
 	for _, el := range testCases {
-		RunTokenizerTestPrimitiveCase(el, s)
+		RunTokenizerTestPrimitiveCase(s, el)
 	}
 }
 
@@ -257,15 +257,15 @@ func (s *TokenizerTestPrimitiveSuite) TestTokenizer_Next_time() {
 		{"time:107", []byte(`"not a Timestamp"`), djs.KindString, djs.LevelRoot, []byte(`"not a Timestamp"`), nil},
 	}
 	for _, el := range tbl {
-		RunTokenizerTestPrimitiveCase(el, s)
+		RunTokenizerTestPrimitiveCase(s, el)
 	}
 }
 
-func RunTokenizerTestPrimitiveCase(el TokenizerTestPrimitiveElement, s *TokenizerTestPrimitiveSuite) {
+func RunTokenizerTestPrimitiveCase(s *TokenizerTestPrimitiveSuite, el TokenizerTestPrimitiveElement) {
 	s.T().Run(el.idx, func(t *testing.T) {
 		b := bytes.NewBuffer(el.in)
 		sc := djs.NewJStructScanner(b)
-		tk := djs.NewJSStructTokenizer(sc)
+		tk := djs.NewJStructTokenizer(sc)
 		e := tk.Next()
 		v := tk.Value()
 		k := tk.Kind()
